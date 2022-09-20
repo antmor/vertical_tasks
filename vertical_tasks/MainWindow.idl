@@ -1,0 +1,10 @@
+namespace vertical_tasks
+{
+    [default_interface]
+    runtimeclass MainWindow : Microsoft.UI.Xaml.Window
+    {
+        MainWindow();
+        Int32 MyProperty;
+        Windows.Foundation.Collections.IObservableVector<IInspectable> WindowTitles{ get; };
+    }
+}
