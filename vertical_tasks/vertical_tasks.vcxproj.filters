@@ -16,6 +16,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
+    <ClInclude Include="ShellHookMessages.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Assets">

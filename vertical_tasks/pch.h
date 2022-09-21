@@ -6,8 +6,9 @@
 #include <vector>
 #include <string>
 #include <optional>
-
-
+#include <wil\cppwinrt.h>
+#include <winrt\base.h>
+#include <wil\resource.h>
 // Undefine GetCurrentTime macro to prevent
 // conflict with Storyboard::GetCurrentTime
 #undef GetCurrentTime
