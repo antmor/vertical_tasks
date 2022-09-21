@@ -15,6 +15,7 @@ namespace winrt::vertical_tasks::implementation
 
     private:
         winrt::fire_and_forget OnShellMessage(WPARAM wParam, LPARAM lParam);
+        winrt::fire_and_forget FetchIcon(HWND hwnd);
         void SelectItem(HWND hwnd);
         void DeleteItem(HWND hwnd);
         Windows::Foundation::Collections::IObservableVector<IInspectable> m_windowTitles{winrt::single_threaded_observable_vector<IInspectable>()};

@@ -37,18 +37,20 @@ namespace winrt::vertical_tasks::implementation
     {
         throw hresult_not_implemented();
     }
+
     struct WinData
     {
-        HWND hwnd;
         std::wstring title;
-
+        wil::unique_hicon icon;
+        bool inView{ false };
     };
 
-    std::vector<WinData> g_windows;
+    std::unordered_map<HWND, WinData> g_windows;
     UINT g_shellHookMsgId{ UINT_MAX };
     bool g_initialized{ false };
 
-    BOOL CALLBACK WindowEnumerationCallBack(HWND hwnd, LPARAM /*lParam*/)
+    // returns true if window already existed
+    decltype(g_windows)::iterator AddOrUpdateWindow(HWND hwnd)
     {
         if (IsWindow(hwnd) && IsWindowVisible(hwnd) && (0 == GetWindow(hwnd, GW_OWNER)))
         {
@@ -59,27 +61,57 @@ namespace winrt::vertical_tasks::implementation
                 std::vector<wchar_t> buffer(size + 1);
                 GetWindowText(hwnd, buffer.data(), size + 1);
 
-                bool found{ false };
-                for (auto&& winData : g_windows)
+                auto found{ g_windows.find(hwnd) };
+
+                if (found != g_windows.end())
                 {
-                    if (winData.hwnd == hwnd)
-                    {
-                        auto oldTitle = std::move(winData.title);
-                        winData.title = std::wstring(std::begin(buffer), std::end(buffer));
-                        found = true;
-                        break;
-                    }
+                    auto&& [_, winData] = *found;
+                    auto oldTitle = std::move(winData.title);
+                    winData.title = std::wstring(std::begin(buffer), std::end(buffer));
+                    winData.inView = true;
+                    return found;
                 }
-                if (!found)
+                else
                 {
-                    g_windows.emplace_back(WinData{ hwnd, std::wstring(std::begin(buffer), std::end(buffer)) });
+                    return g_windows.emplace(hwnd, WinData{ std::wstring(std::begin(buffer), std::end(buffer)) }).first;
                 }
             }
         }
+        return g_windows.end();
+    }
+
+    BOOL CALLBACK WindowEnumerationCallBack(HWND hwnd, LPARAM /*lParam*/)
+    {
+        AddOrUpdateWindow(hwnd);
         // keep on looping
         return true;
     }
 
+    winrt::fire_and_forget MainWindow::FetchIcon(HWND hwnd)
+    {
+        co_await winrt::resume_background();
+
+        HICON icon;
+        SendMessageTimeout(hwnd, WM_GETICON, ICON_SMALL2, 0, SMTO_BLOCK | SMTO_ABORTIFHUNG,
+            500/*ms*/, reinterpret_cast<PDWORD_PTR>(&icon));
+        if (!icon)
+        {
+            SendMessageTimeout(hwnd, WM_GETICON, ICON_SMALL, 0, SMTO_BLOCK | SMTO_ABORTIFHUNG,
+                500/*ms*/, reinterpret_cast<PDWORD_PTR>(&icon));
+        }
+        wil::unique_hicon iconCopy(CopyIcon(icon));
+
+        co_await wil::resume_foreground(DispatcherQueue());
+        auto found{ g_windows.find(hwnd) };
+
+        if (found != g_windows.end())
+        {
+            found->second.icon = std::move(iconCopy);
+        }
+        // TODO update icon in ViewModel
+    }
+
+    //int i = 0;
     void MainWindow::myButton_Click(IInspectable const&, RoutedEventArgs const&)
     {
         if (!g_initialized)
@@ -89,8 +121,8 @@ namespace winrt::vertical_tasks::implementation
             EnumWindows(&WindowEnumerationCallBack, 0);
             std::vector<IInspectable> newTitles;
             newTitles.reserve(g_windows.size());
-
-            for (auto&& winData : g_windows)
+            size_t index = 0;
+            for (auto&& [hwnd, winData] : g_windows)
             {
                 if (!winData.title.empty())
                 {
@@ -108,18 +140,21 @@ namespace winrt::vertical_tasks::implementation
                 });
             g_initialized = true;
         }
+        else
+        {
+            /*g_windows[i].ShowWindow();
+            i++;*/
+        }
     }
 
     void MainWindow::SelectItem(HWND hwnd)
     {
         std::wstring_view titleToSelect;
-        for (auto&& winData : g_windows)
+        auto& found{ g_windows.find(hwnd) };
+
+        if (found != g_windows.end())
         {
-            if (winData.hwnd == hwnd)
-            {
-                titleToSelect = winData.title;
-                break;
-            }
+            titleToSelect = found->second.title;
         }
 
         if (!titleToSelect.empty())
@@ -139,13 +174,12 @@ namespace winrt::vertical_tasks::implementation
     void  MainWindow::DeleteItem(HWND hwnd)
     {
         std::wstring_view titleToDelete;
-        for (auto&& winData : g_windows)
+        
+        auto& found{ g_windows.find(hwnd) };
+
+        if (found != g_windows.end())
         {
-            if (winData.hwnd == hwnd)
-            {
-                titleToDelete = winData.title;
-                break;
-            }
+            titleToDelete = found->second.title;
         }
 
         if (!titleToDelete.empty())
@@ -165,25 +199,46 @@ namespace winrt::vertical_tasks::implementation
     winrt::fire_and_forget MainWindow::OnShellMessage(WPARAM wParam, LPARAM lParam)
     {
         co_await wil::resume_foreground(DispatcherQueue());
-        OutputDebugString(L"shell message");
         std::wstringstream myString;
-        myString << std::hex << wParam << L", " << lParam << std::endl;
-        OutputDebugString(myString.str().c_str());
+        myString << L"shell message: " << std::hex << wParam << L", " << lParam;
         switch (wParam)
         {
         case HSHELL_WINDOWACTIVATED:
         case HSHELL_RUDEAPPACTIVATED:
+        {
             SelectItem(reinterpret_cast<HWND>(lParam));
+        }
             break;
         case HSHELL_WINDOWCREATED:
+        {
             // add the window
-            WindowEnumerationCallBack(reinterpret_cast<HWND>(lParam), 0);
-            SelectItem(reinterpret_cast<HWND>(lParam));
+            auto&& added = AddOrUpdateWindow(reinterpret_cast<HWND>(lParam));
+            if (added != g_windows.end())
+            {
+                auto&& [_, data] = *added;
+                if (!data.inView)
+                {
+                    m_windowTitles.Append(winrt::box_value(data.title));
+                }
+                SelectItem(reinterpret_cast<HWND>(lParam));
+
+            }
+        }
             break;
         case HSHELL_WINDOWDESTROYED:
+        {
             DeleteItem(reinterpret_cast<HWND>(lParam));
-            break;
         }
+            break;
+        default:
+        {
+            myString << L" ! UNKNOWN";
+        }
+            break;
+        }noti
+        myString << std::endl;
+        OutputDebugString(myString.str().c_str());
+
     }
 
     Windows::Foundation::Collections::IObservableVector<IInspectable> MainWindow::WindowTitles()
