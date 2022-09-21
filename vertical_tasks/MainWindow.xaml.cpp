@@ -1,5 +1,7 @@
 ﻿#include "pch.h"
 #include "MainWindow.xaml.h"
+#include "OpenWindows.h"
+#include "Window.h"
 #if __has_include("MainWindow.g.cpp")
 #include "MainWindow.g.cpp"
 #endif
@@ -26,47 +28,23 @@ namespace winrt::vertical_tasks::implementation
     {
         throw hresult_not_implemented();
     }
-    struct WinData
-    {
-        HWND hwnd;
-        std::wstring title;
-
-    };
-
-    std::vector<WinData> g_windows;
-
-    BOOL CALLBACK WindowEnumerationCallBack(HWND hwnd, LPARAM /*lParam*/)
-    {
-        if (IsWindow(hwnd) && IsWindowVisible(hwnd) && (0 == GetWindow(hwnd, GW_OWNER)))
-        {
-            std::wstring title;
-            const auto size = GetWindowTextLength(hwnd);
-            if (size > 0)
-            {
-
-                std::vector<wchar_t> buffer(size + 1);
-                GetWindowText(hwnd, buffer.data(), size + 1);
-
-                g_windows.emplace_back(WinData{ hwnd, std::wstring(std::begin(buffer), std::end(buffer)) });
-            }
-        }
-        // keep on looping
-        return true;
-    }
 
     void MainWindow::myButton_Click(IInspectable const&, RoutedEventArgs const&)
     {
         myButton().Content(box_value(L"Clicked"));
-        g_windows.clear();
-        EnumWindows(&WindowEnumerationCallBack, 0);
+
+        winrt::vertical_tasks::implementation::OpenWindows::GetInstance().UpdateOpenWindowsList();
+        std::vector<Window> g_windows = winrt::vertical_tasks::implementation::OpenWindows::GetInstance().windows;
+
         std::vector<IInspectable> newTitles;
         newTitles.reserve(g_windows.size());
 
-        for (auto&& winData : g_windows)
+        for (auto&& window : g_windows)
         {
-            if (!winData.title.empty())
+            std::wstring title = window.processInfo.name;
+            if (!title.empty())
             {
-                newTitles.emplace_back(winrt::box_value(winData.title));
+                newTitles.emplace_back(winrt::box_value(title));
             }
         }
         m_windowTitles.ReplaceAll(newTitles);
