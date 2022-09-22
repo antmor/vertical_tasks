@@ -41,7 +41,7 @@ namespace winrt::vertical_tasks::implementation
 
         for (auto&& window : g_windows)
         {
-            std::wstring title = window.processInfo.name;
+            std::wstring title = window.processInfo->name;
             if (!title.empty())
             {
                 newTitles.emplace_back(winrt::box_value(title));

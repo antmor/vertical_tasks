@@ -13,9 +13,16 @@
   <ItemGroup>
     <ClCompile Include="pch.cpp" />
     <ClCompile Include="$(GeneratedFilesDir)module.g.cpp" />
+    <ClCompile Include="OpenWindows.cpp" />
+    <ClCompile Include="Window.cpp" />
+    <ClCompile Include="WindowProcess.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
+    <ClInclude Include="Helper.h" />
+    <ClInclude Include="OpenWindows.h" />
+    <ClInclude Include="Window.h" />
+    <ClInclude Include="WindowProcess.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Assets">

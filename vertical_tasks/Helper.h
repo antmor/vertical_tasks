@@ -1,24 +1,20 @@
 #include "pch.h"
+#include "winuser.h"
+#include <errhandlingapi.h>
+#include <handleapi.h>
 
 
 // To learn more about WinUI, the WinUI project structure,
 // and more about our project templates, see: http://aka.ms/winui-project-info.
 
-inline bool CloseHandleIfNotNull(HWND handle)
+inline BOOL CloseHandleIfNotNull(HANDLE handle)
 {
-    if (handle =null)
+    if (handle ==nullptr)
     {
         // Return true if there is nothing to close.
         return true;
     }
-    return NativeMethods::CloseHandle(handle);
-}
-
-    /// Returns the last Win32 Error code thrown by a native method if enabled for this method.
-    /// <returns>The error code as int value.</returns>
-inline DWORD GetLastError()
-{
-    return ::GetLastError();
+    return CloseHandle(handle);
 }
 
 inline void convert_case(std::wstring& output, const std::wstring& input, bool bToLower)
@@ -47,5 +43,15 @@ inline bool StartsWithCaseInsensitive(std::wstring string, std::wstring prefix)
         return false;
     }
 
-    return std::equal(string.begin(), string.begin() + token.size(), token.begin(), token.end(), [](wchar_t a, wchar_t b) { return tolower(a) == tolower(b); });
+    return std::equal(string.begin(), string.begin() + prefix.size(), prefix.begin(), prefix.end(), [](wchar_t a, wchar_t b) { return tolower(a) == tolower(b); });
+}
+
+inline bool CaseInsensitiveEqual(std::wstring string1, std::wstring string2)
+{
+    if (string1.size() != string2.size())
+    {
+        return false;
+    }
+
+    return std::equal(string1.begin(), string1.end(), string2.begin(), string2.end(), [](wchar_t a, wchar_t b) { return tolower(a) == tolower(b); });
 }
