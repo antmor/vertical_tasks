@@ -27,7 +27,10 @@ namespace winrt::vertical_tasks::implementation
       
     struct Window
     {
-        Window(HWND hwnd); 
+         static std::map<HWND, WindowProcess> s_handlesToWindowsCache;
+
+        Window(HWND hwnd);
+        Window() = default;
         std::unique_ptr <WindowProcess> processInfo;                      // An instance of <see cref="WindowProcess"/> that contains the process information for the window
         std::wstring getTitle();                                                     // Gets the title of the window (the string displayed at the top of the window)
         std::wstring getClassName();
@@ -43,9 +46,19 @@ namespace winrt::vertical_tasks::implementation
         WindowSizeState GetWindowSizeState();
         WindowCloakState GetWindowCloakState();
 
+        static BOOL CALLBACK EnumChildFunc(HWND hwnd, LPARAM lParam);
+        bool EnumChildFunc(HWND hwnd);
+
+        Window(const Window&) = delete;
+        Window& operator=(const Window&) = delete;
+
+        Window(Window&&) = default;
+        Window& operator=(Window&&) = default;
+
+        ~Window() {};
+
     private:
-        HWND hwnd;        // The handle to the window
-        std::map<HWND, WindowProcess> _handlesToWindowsCache;
+        HWND m_hwnd = nullptr;        // The handle to the window
         std::wstring GetWindowClassName(HWND hwnd);
         WindowProcess CreateWindowProcessInstance(HWND hWindow);
 

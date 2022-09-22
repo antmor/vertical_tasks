@@ -3,29 +3,30 @@
 #include "Window.h"
 #include "WindowProcess.h"
 #include "dwmapi.h"
-#include "winuser.h""
+#include "winuser.h"
 #include <map>
 #include <future>
 
 
 using namespace winrt; 
-using namespace std::literals;
 using namespace winrt::vertical_tasks::implementation;
 
 
 // To learn more about WinUI, the WinUI project structure,
 // and more about our project templates, see: http://aka.ms/winui-project-info.
 
+std::mutex winrt::vertical_tasks::implementation::Window::m_cacheLock{};
+std::map<HWND, WindowProcess> winrt::vertical_tasks::implementation::Window::s_handlesToWindowsCache{};
 
 /// Initializes a new instance of the <see cref="Window"/> class.
 /// Initializes a new Window representation
-/// <param name="hwnd">the handle to the window we are representing</param>
+/// <param name="m_hwnd">the handle to the window we are representing</param>
 winrt::vertical_tasks::implementation::Window::Window(HWND hwnd)
 {
     if (IsWindow(hwnd))
     {
-        this->hwnd = hwnd;
-        this->processInfo = std::make_unique<WindowProcess>(CreateWindowProcessInstance(hwnd));
+        this->m_hwnd = hwnd;
+        this->processInfo = std::make_unique<WindowProcess>(CreateWindowProcessInstance(m_hwnd));
     }
 }
 
@@ -33,11 +34,11 @@ winrt::vertical_tasks::implementation::Window::Window(HWND hwnd)
 std::wstring Window::getTitle()
 {
     std::wstring title;
-    const auto size = GetWindowTextLength(hwnd);
+    const auto size = GetWindowTextLength(m_hwnd);
     if (size > 0)
     {
         std::vector<wchar_t> buffer(size + 1);
-        GetWindowText(hwnd, buffer.data(), size + 1);
+        GetWindowText(m_hwnd, buffer.data(), size + 1);
 
         return std::wstring(std::begin(buffer), std::end(buffer));
     }
@@ -50,7 +51,7 @@ std::wstring Window::getTitle()
 
 std::wstring Window::getClassName()
 {
-    return GetWindowClassName(hwnd);
+    return GetWindowClassName(m_hwnd);
             
 }
 
@@ -62,7 +63,7 @@ bool Window::IsCloaked()
 /// Gets a value indicating whether the window is a toolwindow
 bool Window::IsToolWindow()
 {
-    return (GetWindowLong(hwnd, GWL_EXSTYLE) &
+    return (GetWindowLong(m_hwnd, GWL_EXSTYLE) &
         WS_EX_TOOLWINDOW) ==
         WS_EX_TOOLWINDOW;
 }
@@ -70,19 +71,19 @@ bool Window::IsToolWindow()
 /// Gets a value indicating whether the window is an appwindow
 bool Window::IsAppWindow()
 {
-    return (GetWindowLong(hwnd, GWL_EXSTYLE) &
+    return (GetWindowLong(m_hwnd, GWL_EXSTYLE) &
         WS_EX_APPWINDOW) == WS_EX_APPWINDOW;
 }
 
 bool Window::TaskListDeleted()
 {
-    return GetProp(hwnd, L"ITaskList_Deleted") != NULL;
+    return GetProp(m_hwnd, L"ITaskList_Deleted") != NULL;
 }
 
 // Gets a value indicating whether the specified windows is the owner (i.e. doesn't have an owner)
 bool Window::IsOwner()
 {
-    return GetWindow(hwnd, GW_OWNER) == NULL;
+    return GetWindow(m_hwnd, GW_OWNER) == NULL;
 }
 
 // Gets a value indicating whether the window is minimized
@@ -105,18 +106,18 @@ void Window::SwitchToWindow()
     std::wstring processName = processInfo->name;
     if (CaseInsensitiveEqual(processName, L"IEXPLORE.EXE") || !IsMinimized())
     {
-        SetForegroundWindow(hwnd);
+        SetForegroundWindow(m_hwnd);
     }
     else
     {
-        if (!ShowWindow(hwnd, SW_RESTORE))
+        if (!ShowWindow(m_hwnd, SW_RESTORE))
         {
             // ShowWindow doesn't work if the process is running elevated: fallback to SendMessage
-            SendMessage(hwnd, WM_SYSCOMMAND, SC_RESTORE,0);
+            SendMessage(m_hwnd, WM_SYSCOMMAND, SC_RESTORE,0);
         }
     }
 
-    FlashWindow(hwnd, true);
+    FlashWindow(m_hwnd, true);
 }
 
 /// <summary>
@@ -129,7 +130,7 @@ void Window::CloseThisWindow(bool switchBeforeClose)
         SwitchToWindow();
     }
 
-    SendMessage(hwnd, WM_SYSCOMMAND, SC_CLOSE,0);
+    SendMessage(m_hwnd, WM_SYSCOMMAND, SC_CLOSE,0);
 }
 
 /// <summary>
@@ -137,7 +138,7 @@ void Window::CloseThisWindow(bool switchBeforeClose)
 /// </summary>
 void Window::MinimizeThisWindow()
 {
-    SendMessage(hwnd, WM_SYSCOMMAND, SC_MINIMIZE, 0);
+    SendMessage(m_hwnd, WM_SYSCOMMAND, SC_MINIMIZE, 0);
 }
 
 // Returns what the window size is
@@ -145,7 +146,7 @@ void Window::MinimizeThisWindow()
 WindowSizeState Window::GetWindowSizeState()
 {
     WINDOWPLACEMENT wPos; 
-    GetWindowPlacement(hwnd, &wPos);
+    GetWindowPlacement(m_hwnd, &wPos);
 
     switch (wPos.showCmd)
     {
@@ -168,10 +169,13 @@ WindowSizeState Window::GetWindowSizeState()
 WindowCloakState Window::GetWindowCloakState()
 {
     DWORD dwCloaked;
-    if (SUCCEEDED(DwmGetWindowAttribute(hwnd, DWMWA_CLOAKED, &dwCloaked, sizeof(dwCloaked))))
+    if (SUCCEEDED(DwmGetWindowAttribute(m_hwnd, DWMWA_CLOAKED, &dwCloaked, sizeof(dwCloaked))))
     {
         switch (dwCloaked)
-        {        
+        {     
+        case 0:
+            return WindowCloakState::None;
+
             case DWM_CLOAKED_APP:
                 return WindowCloakState::App;
             case DWM_CLOAKED_SHELL:
@@ -182,10 +186,12 @@ WindowCloakState Window::GetWindowCloakState()
                 return WindowCloakState::Unknown;
         }
     }
+    return WindowCloakState::Unknown;
+
 }
                                            
 /// Returns the class name of a window.
-/// <param name="hwnd">Handle to the window.</param>
+/// <param name="m_hwnd">Handle to the window.</param>
 /// <returns>Class name</returns>
 std::wstring Window::GetWindowClassName(HWND hwnd)
 {
@@ -207,13 +213,13 @@ WindowProcess Window::CreateWindowProcessInstance(HWND hWindow)
 {
     std::lock_guard<std::mutex> guard(m_cacheLock);
 
-    if (_handlesToWindowsCache.size() > 7000)
+    if (s_handlesToWindowsCache.size() > 7000)
     {
-        _handlesToWindowsCache.clear();
+        s_handlesToWindowsCache.clear();
     }
 
     // Add window to cache if missing
-    if (_handlesToWindowsCache.find(hWindow)== _handlesToWindowsCache.end())
+    if (s_handlesToWindowsCache.find(hWindow)== s_handlesToWindowsCache.end())
     {
         // Get process ID and name
         DWORD processId = WindowProcess::GetProcessIDFromWindowHandle(hWindow);
@@ -222,46 +228,58 @@ WindowProcess Window::CreateWindowProcessInstance(HWND hWindow)
 
         if (processName.size() != 0)
         {
-            _handlesToWindowsCache.emplace(hWindow, WindowProcess{processId, threadId, processName});
+            s_handlesToWindowsCache.emplace(hWindow, WindowProcess{processId, threadId, processName});
         }
         else
         {
             // For the dwm process we can not receive the name. This is no problem because the window isn't part of result list.
             //  Log.Debug($"Invalid process {processId} ({processName}) for window handle {hWindow}.", typeof(Window));
-            _handlesToWindowsCache.emplace(hWindow, WindowProcess{ 0, 0, std::wstring()});
+            s_handlesToWindowsCache.emplace(hWindow, WindowProcess{ 0, 0, std::wstring()});
         }
     }
     // Correct the process data if the window belongs to a uwp app hosted by 'ApplicationFrameHost.exe'
     // (This only works if the window isn't minimized. For minimized windows the required child window isn't assigned.)  ---ASK
-    if(CaseInsensitiveEqual(_handlesToWindowsCache[hWindow].name, L"APPLICATIONFRAMEHOST.EXE"))
+    if(CaseInsensitiveEqual(s_handlesToWindowsCache[hWindow].name, L"APPLICATIONFRAMEHOST.EXE"))
     {
         auto task = std::async(std::launch::async,
             [&]()
             {                
-                ::EnumChildWindows(hWindow, [&](HWND hwnd, LPARAM lParam)->BOOL
-                    {
-                        std::wstring className = GetWindowClassName(hwnd);
-
-                        // Every uwp app main window has at least three child windows. Only the one we are interested in has a class starting with "Windows.UI.Core." and is assigned to the real app process.
-                        // (The other ones have a class name that begins with the string "ApplicationFrame".)
-                        if (StartsWithCaseInsensitive(className, L"Windows.UI.Core."))
-                        {
-                            DWORD childProcessId = WindowProcess::GetProcessIDFromWindowHandle(hwnd);
-                            DWORD childThreadId = WindowProcess::GetThreadIDFromWindowHandle(hwnd);
-                            std::wstring childProcessName = WindowProcess::GetProcessNameFromProcessID(childProcessId);
-
-                            // Update process info in cache
-                            _handlesToWindowsCache[hWindow].UpdateProcessInfo(childProcessId, childThreadId, childProcessName);
-                            return false;
-                        }
-                        else
-                        {
-                            return true;
-                        }
-                    },
+                EnumChildWindows(hWindow, &Window::EnumChildFunc,
                     0);
         });
         task.get();
     }    
-    return _handlesToWindowsCache[hWindow];
+    return s_handlesToWindowsCache[hWindow];
 }
+
+BOOL CALLBACK Window::EnumChildFunc(HWND hwnd, LPARAM lParam)
+{
+    auto thisPtr = reinterpret_cast<Window*>(lParam);
+    return thisPtr->EnumChildFunc(hwnd);
+}
+
+bool Window::EnumChildFunc(HWND hwnd)
+{
+    std::wstring className = GetWindowClassName(hwnd);
+
+    // Every uwp app main window has at least three child windows. Only the one we are interested in has a class starting with "Windows.UI.Core." and is assigned to the real app process.
+    // (The other ones have a class name that begins with the string "ApplicationFrame".)
+    if (StartsWithCaseInsensitive(className, L"Windows.UI.Core."))
+    {
+        DWORD childProcessId = WindowProcess::GetProcessIDFromWindowHandle(hwnd);
+        DWORD childThreadId = WindowProcess::GetThreadIDFromWindowHandle(hwnd);
+        std::wstring childProcessName = WindowProcess::GetProcessNameFromProcessID(childProcessId);
+
+        // Update process info in cache
+        s_handlesToWindowsCache[hwnd].UpdateProcessInfo(childProcessId, childThreadId, childProcessName);
+        return false;
+    }
+    return true;
+}
+
+
+
+
+
+
+

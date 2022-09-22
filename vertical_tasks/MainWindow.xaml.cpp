@@ -8,6 +8,8 @@
 
 using namespace winrt;
 using namespace Microsoft::UI::Xaml;
+using namespace winrt::vertical_tasks::implementation;
+
 
 // To learn more about WinUI, the WinUI project structure,
 // and more about our project templates, see: http://aka.ms/winui-project-info.
@@ -33,8 +35,8 @@ namespace winrt::vertical_tasks::implementation
     {
         myButton().Content(box_value(L"Clicked"));
 
-        winrt::vertical_tasks::implementation::OpenWindows::GetInstance().UpdateOpenWindowsList();
-        std::vector<Window> g_windows = winrt::vertical_tasks::implementation::OpenWindows::GetInstance().windows;
+        OpenWindows::GetInstance().UpdateOpenWindowsList();
+        std::vector<Window>& g_windows = OpenWindows::GetInstance().getAllOpenWindows();
 
         std::vector<IInspectable> newTitles;
         newTitles.reserve(g_windows.size());

@@ -52,12 +52,12 @@ bool WindowProcess::DoesExist()
 }
 
 
-void WindowProcess::UpdateProcessInfo(DWORD processId, DWORD tid, std::wstring name)
+void WindowProcess::UpdateProcessInfo(DWORD pid, DWORD tid, std::wstring pName)
 {
     // TODO: Add verification as to whether the process id and thread id is valid
-    processId = processId;
+    processId = pid;
     threadID = tid;
-    name = name;
+    name = pName;
 
     // Process can be elevated only if process id is not 0 (Dummy value on error)
     isFullAccessDenied = (processId != 0) ? TestProcessAccessUsingAllAccessFlag(processId) : false;
@@ -85,9 +85,10 @@ std::wstring WindowProcess::GetProcessNameFromProcessID(DWORD processId)
     if (handle == INVALID_HANDLE_VALUE)
         return processName;
 
-    WCHAR buffer[MAX_PATH];
+    WCHAR buffer[MAX_PATH] = {};
     DWORD bufSize = MAX_PATH;
-    if (QueryFullProcessImageName(handle, 0, buffer, &bufSize)) {
+    if (QueryFullProcessImageName(handle, 0, buffer, &bufSize)) 
+    {
         processName = std::wstring(std::begin(buffer), std::end(buffer));
     }
     CloseHandle(handle);
@@ -110,9 +111,9 @@ void WindowProcess::KillThisProcess(bool killProcessTree)
 
 
 /// Gets a boolean value indicating whether the access to a process using the AllAccess flag is denied or not.
-bool WindowProcess::TestProcessAccessUsingAllAccessFlag(DWORD processId)
+bool WindowProcess::TestProcessAccessUsingAllAccessFlag(DWORD pId)
 {
-    HANDLE processHandle = OpenProcess(PROCESS_ALL_ACCESS, true, (int)processId);
+    HANDLE processHandle = OpenProcess(PROCESS_ALL_ACCESS, true, (int)pId);
 
     if (GetLastError() == 5)
     {
