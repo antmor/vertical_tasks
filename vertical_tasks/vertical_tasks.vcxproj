@@ -125,6 +125,8 @@
     </ClInclude>
     <ClInclude Include="Window.h" />
     <ClInclude Include="WindowProcess.h" />
+    <ClInclude Include="ShellHookMessages.h" />
+    <ClInclude Include="TaskVM.h" />
   </ItemGroup>
   <ItemGroup>
     <ApplicationDefinition Include="App.xaml" />
@@ -144,6 +146,7 @@
     <ClCompile Include="$(GeneratedFilesDir)module.g.cpp" />
     <ClCompile Include="Window.cpp" />
     <ClCompile Include="WindowProcess.cpp" />
+    <ClCompile Include="TaskVM.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Midl Include="App.idl">
