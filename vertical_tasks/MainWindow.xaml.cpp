@@ -6,9 +6,6 @@
 #include "MainWindow.g.cpp"
 #endif
 
-using namespace winrt;
-using namespace Microsoft::UI::Xaml;
-using namespace winrt::vertical_tasks::implementation;
 #include <microsoft.ui.xaml.window.h>
 
 #include <winrt\microsoft.ui.xaml.h>

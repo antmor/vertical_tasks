@@ -12,6 +12,12 @@ namespace winrt::vertical_tasks::implementation
     }
     void TaskVM::Close()
     {
-        throw hresult_not_implemented();
+        CloseThisWindow(true);
     }
+
+    void TaskVM::Minimize()
+    {
+        SendMessage(m_hwnd, WM_SYSCOMMAND, SC_MINIMIZE, 0);
+    }
+
 }
