@@ -38,6 +38,7 @@ namespace winrt::vertical_tasks::implementation
 
         void Select();
         void Close();
+        void Minimize();
 
         winrt::event_token PropertyChanged(winrt::Windows::UI::Xaml::Data::PropertyChangedEventHandler const& handler)
         {
@@ -52,6 +53,32 @@ namespace winrt::vertical_tasks::implementation
         {
             return m_hwnd;
         }
+
+        
+        void SwitchToWindow()
+        {
+            if (!ShowWindow(m_hwnd, SW_RESTORE))
+            {
+                // ShowWindow doesn't work if the process is running elevated: fallback to SendMessage
+                SendMessage(m_hwnd, WM_SYSCOMMAND, SC_RESTORE, 0);
+            }
+
+            FlashWindow(m_hwnd, true);
+        }
+
+        /// <summary>
+        /// Closes the window
+        /// </summary>
+        void CloseThisWindow(bool switchBeforeClose)
+        {
+            if (switchBeforeClose)
+            {
+                SwitchToWindow();
+            }
+
+            SendMessage(m_hwnd, WM_SYSCOMMAND, SC_CLOSE, 0);
+        }
+
     private:
         HWND m_hwnd;
         winrt::hstring m_title;

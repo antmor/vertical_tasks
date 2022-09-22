@@ -1,5 +1,7 @@
 ﻿#include "pch.h"
 #include "MainWindow.xaml.h"
+#include "OpenWindows.h"
+#include "Window.h"
 #if __has_include("MainWindow.g.cpp")
 #include "MainWindow.g.cpp"
 #endif
