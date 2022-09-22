@@ -52,6 +52,7 @@ namespace winrt::vertical_tasks::implementation
 
         void myButton_Click(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         winrt::fire_and_forget OnItemClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::Controls::ItemClickEventArgs const& args);
+        winrt::fire_and_forget OnSelectionChanged(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::Controls::SelectionChangedEventArgs const& args);
 
         IObservableVector<IInspectable> Tasks() { return m_tasks.as< winrt::Windows::Foundation::Collections::IObservableVector<IInspectable>>(); };
 
@@ -64,6 +65,26 @@ namespace winrt::vertical_tasks::implementation
         winrt::fire_and_forget FetchIcon(HWND hwnd);
 
         winrt::com_ptr<MyTasks> m_tasks{ winrt::make_self<MyTasks>() };
+        
+        struct scope_toggle
+        {
+            operator bool()
+            {
+                return toggle;
+            }
+            auto onInScope()
+            {
+                toggle = true;
+                return wil::scope_exit([this]() {
+                    toggle = false; });
+            }
+        private: 
+            bool toggle{ false };
+
+        };
+
+        scope_toggle selectionFromShell;
+        scope_toggle selectionFromClick;
 
     };
 }

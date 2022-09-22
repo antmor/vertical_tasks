@@ -123,17 +123,54 @@ namespace winrt::vertical_tasks::implementation
         }
     }
 
-    winrt::fire_and_forget MainWindow::OnItemClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::Controls::ItemClickEventArgs const& args)
+    winrt::fire_and_forget MainWindow::OnItemClick(Windows::Foundation::IInspectable const& /*sender*/, Microsoft::UI::Xaml::Controls::ItemClickEventArgs const& /*args*/)
     {
         
-        args.ClickedItem().as<winrt::vertical_tasks::TaskVM>();
-
-        args.OriginalSource();
         co_return;
     }
 
+    winrt::fire_and_forget MainWindow::OnSelectionChanged(Windows::Foundation::IInspectable const& /*sender*/, Microsoft::UI::Xaml::Controls::SelectionChangedEventArgs const& /*args*/)
+    {
+        if (selectionFromShell)
+        {
+            // seleciton change from shell
+            co_return;
+        }
+
+        std::vector<HWND> windowsToShow;
+        {
+            auto scope = selectionFromClick.onInScope();
+
+            auto selection = myList().SelectedItems();
+            for (auto&& item : selection)
+            {
+                auto& taskVM = item.as<vertical_tasks::implementation::TaskVM>();
+                // select window
+                windowsToShow.emplace_back(taskVM->Hwnd());
+            }
+        }
+        co_await winrt::resume_background();
+        for (auto&& hwnd : windowsToShow)
+        {
+            SetForegroundWindow(hwnd);
+        
+            if (!ShowWindow(hwnd, SW_RESTORE))
+            {
+                // ShowWindow doesn't work if the process is running elevated: fallback to SendMessage
+                SendMessage(hwnd, WM_SYSCOMMAND, SC_RESTORE, 0);
+            }
+        }
+    }
+
+
     void MainWindow::SelectItem(HWND hwnd)
     {
+        if (selectionFromClick)
+        {
+            // we caused the selection, so ignore it. 
+            return;
+        }
+        auto scope = selectionFromShell.onInScope();
         auto found = m_tasks->find(hwnd);
 
         if (found != m_tasks->end())
