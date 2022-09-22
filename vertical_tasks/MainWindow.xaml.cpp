@@ -14,6 +14,7 @@
 
 #include <sstream>
 
+#include <TaskVM.h>
 namespace winrt
 {
     using namespace Microsoft::UI::Xaml;
@@ -28,61 +29,44 @@ namespace winrt::vertical_tasks::implementation
         InitializeComponent();
     }
 
-    int32_t MainWindow::MyProperty()
-    {
-        throw hresult_not_implemented();
-    }
-
-    void MainWindow::MyProperty(int32_t /* value */)
-    {
-        throw hresult_not_implemented();
-    }
-
-    struct WinData
-    {
-        std::wstring title;
-        wil::unique_hicon icon;
-        bool inView{ false };
-    };
-
-    std::unordered_map<HWND, WinData> g_windows;
     UINT g_shellHookMsgId{ UINT_MAX };
     bool g_initialized{ false };
 
     // returns true if window already existed
-    decltype(g_windows)::iterator AddOrUpdateWindow(HWND hwnd)
+    winrt::vertical_tasks::TaskVM MainWindow::AddOrUpdateWindow(HWND hwnd, bool shouldUpdate)
     {
         if (IsWindow(hwnd) && IsWindowVisible(hwnd) && (0 == GetWindow(hwnd, GW_OWNER)))
         {
-            std::wstring title;
-            const auto size = GetWindowTextLength(hwnd);
-            if (size > 0)
+            auto found= m_tasks->find(hwnd);
+
+            if (found != m_tasks->end())
             {
-                std::vector<wchar_t> buffer(size + 1);
-                GetWindowText(hwnd, buffer.data(), size + 1);
-
-                auto found{ g_windows.find(hwnd) };
-
-                if (found != g_windows.end())
+                // todo call recalculate
+                return found->as<winrt::vertical_tasks::TaskVM>();
+            }
+            else
+            {
+                winrt::vertical_tasks::TaskVM newItem(reinterpret_cast<uint64_t>(hwnd));
+                if (shouldUpdate)
                 {
-                    auto&& [_, winData] = *found;
-                    auto oldTitle = std::move(winData.title);
-                    winData.title = std::wstring(std::begin(buffer), std::end(buffer));
-                    winData.inView = true;
-                    return found;
+                    m_tasks->Append(newItem);
                 }
                 else
                 {
-                    return g_windows.emplace(hwnd, WinData{ std::wstring(std::begin(buffer), std::end(buffer)) }).first;
+                    // don't update, add to the internal
+                    m_tasks->get_container().push_back(newItem);
                 }
+                return newItem;
             }
         }
-        return g_windows.end();
+        return nullptr;
     }
 
-    BOOL CALLBACK WindowEnumerationCallBack(HWND hwnd, LPARAM /*lParam*/)
+    BOOL CALLBACK WindowEnumerationCallBack(HWND hwnd, LPARAM lParam)
     {
-        AddOrUpdateWindow(hwnd);
+        auto thisRef = reinterpret_cast<MainWindow*>(lParam);
+
+        thisRef->AddOrUpdateWindow(hwnd);
         // keep on looping
         return true;
     }
@@ -102,11 +86,11 @@ namespace winrt::vertical_tasks::implementation
         wil::unique_hicon iconCopy(CopyIcon(icon));
 
         co_await wil::resume_foreground(DispatcherQueue());
-        auto found{ g_windows.find(hwnd) };
+        auto found = m_tasks->find(hwnd);
 
-        if (found != g_windows.end())
+        if (found != m_tasks->end())
         {
-            found->second.icon = std::move(iconCopy);
+            //found->second.icon = std::move(iconCopy);
         }
         // TODO update icon in ViewModel
     }
@@ -117,19 +101,11 @@ namespace winrt::vertical_tasks::implementation
         if (!g_initialized)
         {
             myButton().Content(box_value(L"Clicked"));
-            g_windows.clear();
-            EnumWindows(&WindowEnumerationCallBack, 0);
-            std::vector<IInspectable> newTitles;
-            newTitles.reserve(g_windows.size());
-            size_t index = 0;
-            for (auto&& [hwnd, winData] : g_windows)
-            {
-                if (!winData.title.empty())
-                {
-                    newTitles.emplace_back(winrt::box_value(winData.title));
-                }
-            }
-            m_windowTitles.ReplaceAll(newTitles);
+            EnumWindows(&WindowEnumerationCallBack, reinterpret_cast<LPARAM>(this));
+            
+            m_tasks->do_call_changed(winrt::Windows::Foundation::Collections::CollectionChange::Reset, 0u);
+
+
             static ShellHookMessages s_myMessages;
             s_myMessages.Register([weak_this = get_weak()](WPARAM wParam, LPARAM lParam)
                 {
@@ -147,52 +123,43 @@ namespace winrt::vertical_tasks::implementation
         }
     }
 
+    winrt::fire_and_forget MainWindow::OnItemClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::Controls::ItemClickEventArgs const& args)
+    {
+        
+        args.ClickedItem().as<winrt::vertical_tasks::TaskVM>();
+
+        args.OriginalSource();
+        co_return;
+    }
+
     void MainWindow::SelectItem(HWND hwnd)
     {
-        std::wstring_view titleToSelect;
-        auto& found{ g_windows.find(hwnd) };
+        auto found = m_tasks->find(hwnd);
 
-        if (found != g_windows.end())
+        if (found != m_tasks->end())
         {
-            titleToSelect = found->second.title;
+            myList().SelectedItem(*found);
         }
-
-        if (!titleToSelect.empty())
+        else
         {
-            for (auto&& item : m_windowTitles)
-            {
-                auto&& title = winrt::unbox_value<hstring>(item);
-                if (title == titleToSelect)
-                {
-                    myList().SelectedItem(item);
-                    return;
-                }
-            }
+            LOG_HR(E_ACCESSDENIED);
         }
     }
 
     void  MainWindow::DeleteItem(HWND hwnd)
     {
-        std::wstring_view titleToDelete;
-        
-        auto& found{ g_windows.find(hwnd) };
+        auto found = m_tasks->find(hwnd);
 
-        if (found != g_windows.end())
+        if (found != m_tasks->end())
         {
-            titleToDelete = found->second.title;
+            const auto indexToErase{ std::distance(m_tasks->begin(), found) };
+            m_tasks->get_container().erase(found);
+            m_tasks->do_call_changed(Windows::Foundation::Collections::CollectionChange::ItemRemoved, indexToErase);
+
         }
-
-        if (!titleToDelete.empty())
+        else
         {
-            for (uint32_t i = 0; i < m_windowTitles.Size(); i++)
-            {
-                auto&& title = winrt::unbox_value<hstring>(m_windowTitles.GetAt(i));
-                if (title == titleToDelete)
-                {
-                    m_windowTitles.RemoveAt(i);
-                    break;
-                }
-            }
+            LOG_HR(E_ACCESSDENIED);
         }
     }
 
@@ -212,16 +179,10 @@ namespace winrt::vertical_tasks::implementation
         case HSHELL_WINDOWCREATED:
         {
             // add the window
-            auto&& added = AddOrUpdateWindow(reinterpret_cast<HWND>(lParam));
-            if (added != g_windows.end())
+            auto&& added = AddOrUpdateWindow(reinterpret_cast<HWND>(lParam), true /*send change update*/);
+            if (added)
             {
-                auto&& [_, data] = *added;
-                if (!data.inView)
-                {
-                    m_windowTitles.Append(winrt::box_value(data.title));
-                }
                 SelectItem(reinterpret_cast<HWND>(lParam));
-
             }
         }
             break;
@@ -235,15 +196,10 @@ namespace winrt::vertical_tasks::implementation
             myString << L" ! UNKNOWN";
         }
             break;
-        }noti
+        }
         myString << std::endl;
         OutputDebugString(myString.str().c_str());
 
-    }
-
-    Windows::Foundation::Collections::IObservableVector<IInspectable> MainWindow::WindowTitles()
-    {
-        return m_windowTitles;
     }
 
 }
