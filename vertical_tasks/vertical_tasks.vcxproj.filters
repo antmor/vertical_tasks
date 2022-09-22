@@ -13,9 +13,12 @@
   <ItemGroup>
     <ClCompile Include="pch.cpp" />
     <ClCompile Include="$(GeneratedFilesDir)module.g.cpp" />
+    <ClCompile Include="TaskVM.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
+    <ClInclude Include="ShellHookMessages.h" />
+    <ClInclude Include="TaskVM.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Assets">
