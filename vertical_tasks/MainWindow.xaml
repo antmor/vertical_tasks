@@ -9,11 +9,13 @@
     mc:Ignorable="d"
     >
 
-    <StackPanel Orientation="Vertical" HorizontalAlignment="Left" VerticalAlignment="Bottom">
+    <StackPanel Orientation="Vertical" HorizontalAlignment="Left" VerticalAlignment="Center">
         <Button x:Name="myButton" Click="myButton_Click">Click Me</Button>
         <ListView x:Name="myList" 
                   SelectionMode="Extended"
                   ItemsSource="{x:Bind Tasks}" 
+                  ItemClick="OnItemClick"
+                  SelectionChanged="OnSelectionChanged"
                   HorizontalAlignment="Stretch"
                   CanDragItems="True"
                   CanReorderItems="True"
@@ -53,6 +55,7 @@
                             <RowDefinition Height="20"/>
                         </Grid.RowDefinitions>
                             <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="*"/>

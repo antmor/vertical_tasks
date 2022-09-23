@@ -333,10 +333,7 @@ namespace winrt::vertical_tasks::implementation
         {
             myButton().Content(box_value(L"Clicked"));
             EnumWindows(&WindowEnumerationCallBack, reinterpret_cast<LPARAM>(this));
-
-            m_tasks->do_call_changed(winrt::Windows::Foundation::Collections::CollectionChange::Reset, 0u);
-   
-            m_tasks->sort();
+            //m_tasks->sort();
 
             m_shellHook = std::make_unique<ShellHookMessages>();
             m_shellHook->Register([weak_this = get_weak()](WPARAM wParam, LPARAM lParam)
