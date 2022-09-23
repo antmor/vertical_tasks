@@ -31,11 +31,16 @@ namespace winrt::vertical_tasks::implementation
             return m_title;
         };
         
-        winrt::Microsoft::UI::Xaml::Controls::IconSource IconSource()
+        Microsoft::UI::Xaml::Media::Imaging::SoftwareBitmapSource IconSource()
         {
             return m_iconSource;
         };
 
+        void IconSource(Microsoft::UI::Xaml::Media::Imaging::SoftwareBitmapSource const& value)
+        {
+            m_iconSource = value;
+            m_propertyChanged(*this, winrt::Windows::UI::Xaml::Data::PropertyChangedEventArgs(winrt::hstring(L"IconSource")));
+        }
         void Select();
         void Close();
 
@@ -56,7 +61,7 @@ namespace winrt::vertical_tasks::implementation
         HWND m_hwnd;
         winrt::hstring m_title;
         wil::unique_hicon m_icon;
-        winrt::Microsoft::UI::Xaml::Controls::IconSource m_iconSource{nullptr};
+        winrt::Microsoft::UI::Xaml::Media::Imaging::SoftwareBitmapSource m_iconSource{nullptr};
         winrt::event<Windows::UI::Xaml::Data::PropertyChangedEventHandler> m_propertyChanged;
 
     };
