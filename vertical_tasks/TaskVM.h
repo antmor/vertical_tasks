@@ -43,6 +43,7 @@ namespace winrt::vertical_tasks::implementation
         }
         void Select();
         void Close();
+        void Minimize();
 
         winrt::event_token PropertyChanged(winrt::Microsoft::UI::Xaml::Data::PropertyChangedEventHandler const& handler)
         {

@@ -50,11 +50,16 @@
                             </Button.Content>
                             <Button.Flyout>
                                 <MenuFlyout>
-                                    <MenuFlyoutItem>
-                                        <MenuFlyoutItem.Icon>
-                                            <FontIcon Glyph="&#xE8BB;"/>
-                                        </MenuFlyoutItem.Icon>
-                                    </MenuFlyoutItem>
+									<MenuFlyoutItem Text="Close window" Click="{x:Bind Close}">
+										<MenuFlyoutItem.Icon>
+											<FontIcon Glyph="&#xe711;"/>
+										</MenuFlyoutItem.Icon>
+									</MenuFlyoutItem>
+									<MenuFlyoutItem Text="Minimize window" Click="{x:Bind Minimize}">
+										<MenuFlyoutItem.Icon>
+											<FontIcon Glyph="&#xe738;"/>
+										</MenuFlyoutItem.Icon>
+									</MenuFlyoutItem>
                                 </MenuFlyout>
                             </Button.Flyout>
                         </Button>

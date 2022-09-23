@@ -16,6 +16,7 @@
 #include "ShellHookMessages.h"
 
 #include <sstream>
+#include "winuser.h"
 
 #include <TaskVM.h>
 namespace winrt
@@ -43,7 +44,8 @@ namespace winrt::vertical_tasks::implementation
     // returns true if window already existed
     winrt::vertical_tasks::TaskVM MainWindow::AddOrUpdateWindow(HWND hwnd, bool shouldUpdate)
     {
-        if (IsWindow(hwnd) && IsWindowVisible(hwnd) && (0 == GetWindow(hwnd, GW_OWNER)))
+        if (IsWindow(hwnd) && IsWindowVisible(hwnd) && (0 == GetWindow(hwnd, GW_OWNER)) &&
+            (!IsToolWindow(hwnd) || IsAppWindow(hwnd)) && !TaskListDeleted(hwnd))
         {
             auto found= m_tasks->find(hwnd);
 

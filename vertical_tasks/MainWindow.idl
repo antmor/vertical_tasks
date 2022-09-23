@@ -9,6 +9,7 @@ namespace vertical_tasks
 
         void Select();
         void Close();
+        void Minimize();
 
     }
 
