@@ -1,15 +1,28 @@
 namespace vertical_tasks
 {
+    enum GroupId
+    {
+        GroupOne,
+        GroupTwo,
+        GroupThree,
+        GroupFour,
+        Ungrouped
+    };
+
     [default_interface]
     runtimeclass TaskVM : Windows.UI.Xaml.Data.INotifyPropertyChanged
     {
-        TaskVM(UInt64 hwnd);
+        TaskVM(UInt64 hwnd, GroupId groupId, Boolean isGroup);
         String Title{ get; };
+        String Spacing{ get; };
         Microsoft.UI.Xaml.Controls.IconSource IconSource{ get; };
+        GroupId Group{ get; set; };
+        Boolean IsGroupId{ get; };
+        Boolean IsTask{ get; };
+        Boolean IsGroupedTask{ get; };
 
         void Select();
         void Close();
-
     }
 
     [default_interface]

@@ -10,26 +10,84 @@ namespace winrt::vertical_tasks::implementation
     {
         TaskVM() = default;
 
-        TaskVM(uint64_t hwnd): m_hwnd(reinterpret_cast<HWND>(hwnd))
+        TaskVM(uint64_t hwnd, const winrt::vertical_tasks::GroupId groupId, const bool isGroup): 
+            m_hwnd(reinterpret_cast<HWND>(hwnd)),
+            m_isGroupHeader(isGroup),
+            m_groupId(groupId)
         {
-            const auto size = GetWindowTextLength(m_hwnd);
-            if (size > 0)
+            if (m_isGroupHeader)
             {
-                std::vector<wchar_t> buffer(size + 1);
-                GetWindowText(m_hwnd, buffer.data(), size + 1);
+                switch (groupId)
+                {
+                    case winrt::vertical_tasks::GroupId::GroupOne:
+                    {
+                        m_title = L"Group One";
+                        break;
+                    }
+                    case winrt::vertical_tasks::GroupId::GroupTwo:
+                    {
+                        m_title = L"Group Two";
+                        break;
+                    }
+                    case winrt::vertical_tasks::GroupId::GroupThree:
+                    {
+                        m_title = L"Group Three";
+                        break;
+                    }
+                }
 
-                m_title = std::wstring_view(buffer.data(), buffer.size());
             }
             else
             {
-                LOG_HR(E_INVALIDARG);
+                const auto size = GetWindowTextLength(m_hwnd);
+                if (size > 0)
+                {
+                    std::vector<wchar_t> buffer(size + 1);
+                    GetWindowText(m_hwnd, buffer.data(), size + 1);
+
+                    m_title = std::wstring_view(buffer.data(), buffer.size());
+                }
+                else
+                {
+                    LOG_HR(E_INVALIDARG);
+                }
             }
+        }
+
+        winrt::vertical_tasks::GroupId Group()
+        {
+            return m_groupId;
+        }
+
+        void Group(winrt::vertical_tasks::GroupId id)
+        {
+            m_groupId = id;
+        }
+
+        bool IsGroupId()
+        {
+            return m_isGroupHeader;
+        }
+
+        bool IsTask()
+        {
+            return !m_isGroupHeader;
+        }
+
+        bool IsGroupedTask()
+        {
+            return !m_isGroupHeader && m_groupId != winrt::vertical_tasks::GroupId::Ungrouped;
         }
 
         hstring Title()
         {
             return m_title;
         };
+
+        hstring Spacing()
+        {
+            return L"       ";
+        }
         
         winrt::Microsoft::UI::Xaml::Controls::IconSource IconSource()
         {
@@ -52,8 +110,15 @@ namespace winrt::vertical_tasks::implementation
         {
             return m_hwnd;
         }
+
+        bool isGroupHeader()
+        {
+            return m_isGroupHeader;
+        }
     private:
         HWND m_hwnd;
+        bool m_isGroupHeader;
+        winrt::vertical_tasks::GroupId m_groupId;
         winrt::hstring m_title;
         wil::unique_hicon m_icon;
         winrt::Microsoft::UI::Xaml::Controls::IconSource m_iconSource{nullptr};

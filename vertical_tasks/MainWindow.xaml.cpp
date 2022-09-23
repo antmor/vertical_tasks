@@ -37,7 +37,7 @@ namespace winrt::vertical_tasks::implementation
     {
         if (IsWindow(hwnd) && IsWindowVisible(hwnd) && (0 == GetWindow(hwnd, GW_OWNER)))
         {
-            auto found= m_tasks->find(hwnd);
+            auto found = m_tasks->find(hwnd);
 
             if (found != m_tasks->end())
             {
@@ -46,7 +46,49 @@ namespace winrt::vertical_tasks::implementation
             }
             else
             {
-                winrt::vertical_tasks::TaskVM newItem(reinterpret_cast<uint64_t>(hwnd));
+                u_int currentTaskCount = m_tasks->m_taskCount;
+                winrt::vertical_tasks::GroupId groupId = winrt::vertical_tasks::GroupId::Ungrouped;
+
+                if (currentTaskCount < 4)
+                {
+                    if (currentTaskCount == 0)
+                    {
+                        winrt::vertical_tasks::TaskVM groupOne(reinterpret_cast<uint64_t>(nullptr),
+                            winrt::vertical_tasks::GroupId::GroupOne,
+                            true);
+                        m_tasks->Append(groupOne);
+                        m_tasks->m_taskCount += 1;
+                    }
+
+                    groupId = winrt::vertical_tasks::GroupId::GroupOne;
+                }
+                else if (currentTaskCount >= 4 && currentTaskCount < 7)
+                {
+                    if (currentTaskCount == 4)
+                    {
+                        winrt::vertical_tasks::TaskVM groupTwo(reinterpret_cast<uint64_t>(nullptr),
+                            winrt::vertical_tasks::GroupId::GroupTwo,
+                            true);
+                        m_tasks->Append(groupTwo);
+                        m_tasks->m_taskCount += 1;
+                    }
+
+                    groupId = winrt::vertical_tasks::GroupId::GroupTwo;
+                }
+                else if (currentTaskCount == 7)
+                {
+                    winrt::vertical_tasks::TaskVM groupThree(reinterpret_cast<uint64_t>(nullptr),
+                        winrt::vertical_tasks::GroupId::GroupThree,
+                        true);
+                    m_tasks->Append(groupThree);
+                    m_tasks->m_taskCount += 1;
+
+                    groupId = winrt::vertical_tasks::GroupId::GroupThree;
+                }
+
+                winrt::vertical_tasks::TaskVM newItem(reinterpret_cast<uint64_t>(hwnd),
+                    groupId,
+                    false);
                 if (shouldUpdate)
                 {
                     m_tasks->Append(newItem);
@@ -56,6 +98,7 @@ namespace winrt::vertical_tasks::implementation
                     // don't update, add to the internal
                     m_tasks->get_container().push_back(newItem);
                 }
+                m_tasks->m_taskCount += 1;
                 return newItem;
             }
         }
@@ -102,7 +145,7 @@ namespace winrt::vertical_tasks::implementation
         {
             myButton().Content(box_value(L"Clicked"));
             EnumWindows(&WindowEnumerationCallBack, reinterpret_cast<LPARAM>(this));
-            
+
             m_tasks->do_call_changed(winrt::Windows::Foundation::Collections::CollectionChange::Reset, 0u);
 
 
@@ -123,9 +166,37 @@ namespace winrt::vertical_tasks::implementation
         }
     }
 
+    void MainWindow::TaskClick(winrt::Windows::Foundation::IInspectable const& sender,
+        winrt::Microsoft::UI::Xaml::RoutedEventArgs const& /*e*/)
+    {
+        Microsoft::UI::Xaml::Data::ItemIndexRange deselectRange{ 0, m_tasks->m_taskCount };
+        myList().DeselectRange(deselectRange);
+
+        Microsoft::UI::Xaml::Controls::Button wrappingButton = sender.as<Microsoft::UI::Xaml::Controls::Button>();
+        Microsoft::UI::Xaml::Controls::Grid grid = wrappingButton.Content().as<Microsoft::UI::Xaml::Controls::Grid>();
+        if (auto textBlock = grid.Children().GetAt(2).as<Microsoft::UI::Xaml::Controls::TextBlock>())
+        {
+            if (textBlock.Text() == L"Group One")
+            {
+                Microsoft::UI::Xaml::Data::ItemIndexRange indexRange{ 0, 4u };
+                myList().SelectRange(indexRange);
+            }
+            if (textBlock.Text() == L"Group Two")
+            {
+                Microsoft::UI::Xaml::Data::ItemIndexRange indexRange{ 4, 3u };
+                myList().SelectRange(indexRange);
+            }
+            if (textBlock.Text() == L"Group Three")
+            {
+                Microsoft::UI::Xaml::Data::ItemIndexRange indexRange{ 7, 2u };
+                myList().SelectRange(indexRange);
+            }
+        }
+    }
+
     winrt::fire_and_forget MainWindow::OnItemClick(Windows::Foundation::IInspectable const& /*sender*/, Microsoft::UI::Xaml::Controls::ItemClickEventArgs const& /*args*/)
     {
-        
+
         co_return;
     }
 
@@ -153,7 +224,7 @@ namespace winrt::vertical_tasks::implementation
         for (auto&& hwnd : windowsToShow)
         {
             SetForegroundWindow(hwnd);
-        
+
             if (!ShowWindow(hwnd, SW_RESTORE))
             {
                 // ShowWindow doesn't work if the process is running elevated: fallback to SendMessage
@@ -209,10 +280,7 @@ namespace winrt::vertical_tasks::implementation
         {
         case HSHELL_WINDOWACTIVATED:
         case HSHELL_RUDEAPPACTIVATED:
-        {
-            SelectItem(reinterpret_cast<HWND>(lParam));
-        }
-            break;
+        break;
         case HSHELL_WINDOWCREATED:
         {
             // add the window
@@ -222,17 +290,17 @@ namespace winrt::vertical_tasks::implementation
                 SelectItem(reinterpret_cast<HWND>(lParam));
             }
         }
-            break;
+        break;
         case HSHELL_WINDOWDESTROYED:
         {
             DeleteItem(reinterpret_cast<HWND>(lParam));
         }
-            break;
+        break;
         default:
         {
             myString << L" ! UNKNOWN";
         }
-            break;
+        break;
         }
         myString << std::endl;
         OutputDebugString(myString.str().c_str());

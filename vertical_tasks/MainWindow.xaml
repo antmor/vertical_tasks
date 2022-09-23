@@ -7,25 +7,61 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d">
 
-    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+    <StackPanel Orientation="Horizontal" HorizontalAlignment="Stretch" VerticalAlignment="Center">
         <Button x:Name="myButton" Click="myButton_Click">Click Me</Button>
         <ListView x:Name="myList" 
                   ItemsSource="{x:Bind Tasks}" 
-                  Width="300"
-                  ItemClick="OnItemClick"
-                  SelectionChanged="OnSelectionChanged">
+                  HorizontalAlignment="Stretch"
+                  CanDragItems="True"
+                    CanReorderItems="True"
+                    AllowDrop="True"
+                    SelectionMode="Extended"
+                  >
             <ListView.ItemTemplate>
                 <DataTemplate x:DataType="local:TaskVM">
-                    <Grid Margin="0,0,0,0" Padding="0,0,0,0">
+                    <Button Background="Transparent" BorderThickness="0" Click="TaskClick">
+                        <Button.Resources>
+                            <ResourceDictionary>
+                                <ResourceDictionary.ThemeDictionaries>
+                                    <ResourceDictionary x:Key="Light">
+                                        <SolidColorBrush x:Key="ButtonBackground"
+                                                                        Color="Transparent"/>
+                                        <SolidColorBrush x:Key="ButtonBackgroundPointerOver"
+                                                                        Color="Transparent"/>
+                                        <SolidColorBrush x:Key="ButtonBackgroundPressed"
+                                                                        Color="Transparent"/>
+                                        <SolidColorBrush x:Key="ButtonBackgroundDisabled"
+                                                                        Color="Transparent"/>
+                                    </ResourceDictionary>
+                                    <ResourceDictionary x:Key="Dark">
+                                        <SolidColorBrush x:Key="ButtonBackground"
+                                                                        Color="Transparent"/>
+                                        <SolidColorBrush x:Key="ButtonBackgroundPointerOver"
+                                                                        Color="Transparent"/>
+                                        <SolidColorBrush x:Key="ButtonBackgroundPressed"
+                                                                        Color="Transparent"/>
+                                        <SolidColorBrush x:Key="ButtonBackgroundDisabled"
+                                                                        Color="Transparent"/>
+                                    </ResourceDictionary>
+                                </ResourceDictionary.ThemeDictionaries>
+                            </ResourceDictionary>
+                        </Button.Resources>
+                        <Grid Margin="0,0,0,0" Padding="0,0,0,0" HorizontalAlignment="Stretch">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="20"/>
                         </Grid.RowDefinitions>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
-                        <Ellipse x:Name="Ellipse"
+                        <TextBlock Text="     > "
+                               Visibility="{x:Bind IsGroupedTask}"
+                               FontFamily="Segoe UI Variable Static Small"
+                               FontSize="14"
+                               HorizontalAlignment="Left"/>
+                        <Ellipse Grid.Column="1" x:Name="Ellipse"
                             Grid.RowSpan="2"
                             Width ="16"
                             Height="16"
@@ -33,17 +69,18 @@
                             VerticalAlignment="Center"
                             HorizontalAlignment="Center"
                             Fill="{ThemeResource SystemControlBackgroundBaseMediumBrush}"/>
-                        <TextBlock Grid.Column="1"
+                        <TextBlock Grid.Column="2"
                             Text="{x:Bind Title}"
                             Style="{ThemeResource BaseTextBlockStyle}"
                                    TextTrimming="CharacterEllipsis"
                                    FontSize="12"
-                            Margin="6,0,0,0"/>
-                        <Button Grid.Column="2"
+                            Margin="6,0,0,0"
+                                   HorizontalAlignment="Stretch"/>
+                        <Button Grid.Column="3"
                                 Width="20"
                                 Margin="0,0,0,0"
                                 Padding="0,0,0,0"
-                                 
+                                Visibility="{x:Bind IsTask}"
                             >
                             <Button.Content>
                                 <FontIcon Glyph="&#xE00F;"/>
@@ -59,6 +96,7 @@
                             </Button.Flyout>
                         </Button>
                     </Grid>
+                    </Button>
                 </DataTemplate>
             </ListView.ItemTemplate>
         </ListView>

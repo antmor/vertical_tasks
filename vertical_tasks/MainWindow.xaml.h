@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include "MainWindow.g.h"
+#include <winrt\microsoft.ui.xaml.h>
 #include "TaskVM.h"
 
 namespace winrt::vertical_tasks::implementation
@@ -37,16 +38,27 @@ namespace winrt::vertical_tasks::implementation
                 });
         }
 
+        auto find(winrt::hstring title)
+        {
+            return std::find_if(begin(), end(), [title](IInspectable& other)
+                {
+                    return title == other.as<vertical_tasks::implementation::TaskVM>()->Title();
+                });
+        }
+
         void do_call_changed(Windows::Foundation::Collections::CollectionChange const change, uint32_t const index)
         {
             call_changed(change, index);
         }
+
+        u_int m_taskCount = 0;
     private:
         std::vector<IInspectable> m_values{ };
     };
 
     struct MainWindow : MainWindowT<MainWindow>
     {
+    public:
         MainWindow();
 
 
@@ -59,6 +71,8 @@ namespace winrt::vertical_tasks::implementation
         winrt::vertical_tasks::TaskVM AddOrUpdateWindow(HWND hwnd, bool shouldUpdate = false);
         void SelectItem(HWND hwnd);
         void DeleteItem(HWND hwnd);
+        void TaskClick(winrt::Windows::Foundation::IInspectable const& sender, winrt::Microsoft::UI::Xaml::RoutedEventArgs const& e);
+
 
     private:
         winrt::fire_and_forget OnShellMessage(WPARAM wParam, LPARAM lParam);
