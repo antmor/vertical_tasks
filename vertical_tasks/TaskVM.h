@@ -38,6 +38,7 @@ namespace winrt::vertical_tasks::implementation
 
         void Select();
         void Close();
+        void Minimize();
 
         winrt::event_token PropertyChanged(winrt::Windows::UI::Xaml::Data::PropertyChangedEventHandler const& handler)
         {
@@ -58,6 +59,7 @@ namespace winrt::vertical_tasks::implementation
         wil::unique_hicon m_icon;
         winrt::Microsoft::UI::Xaml::Controls::IconSource m_iconSource{nullptr};
         winrt::event<Windows::UI::Xaml::Data::PropertyChangedEventHandler> m_propertyChanged;
+        void SwitchToWindow();
 
     };
 }
