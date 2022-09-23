@@ -100,6 +100,16 @@ namespace winrt::vertical_tasks::implementation
                 // As an example, let's change the title text of the window.
                 appWindow.TitleBar().ExtendsContentIntoTitleBar(true);
             }
+            EnableMenuItem(GetSystemMenu(m_hwnd, FALSE), SC_CLOSE,
+                MF_BYCOMMAND | MF_DISABLED | MF_GRAYED);
+
+                SetWindowLong(m_hwnd, GWL_STYLE,
+                    GetWindowLong(m_hwnd, GWL_STYLE) & ~WS_MINIMIZEBOX);
+      
+            
+                SetWindowLong(m_hwnd, GWL_STYLE,
+                    GetWindowLong(m_hwnd, GWL_STYLE) & ~WS_MAXIMIZEBOX);
+
         }
 
         m_mon = MonitorFromWindow(m_hwnd, MONITOR_DEFAULTTONULL);
