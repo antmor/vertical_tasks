@@ -74,7 +74,7 @@
                                VerticalAlignment="Center"
                                HorizontalAlignment="Center"
                                Grid.Column="1"
-                               Source ="{x:Bind IconSource}"/>
+                               Source ="{x:Bind IconSource, Mode=OneWay}"/>
                            <TextBlock Grid.Column="2"
                                Text="{x:Bind Title, Mode=OneWay}"
                                Style="{ThemeResource BaseTextBlockStyle}"

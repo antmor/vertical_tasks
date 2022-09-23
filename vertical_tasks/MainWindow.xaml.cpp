@@ -224,7 +224,7 @@ namespace winrt::vertical_tasks::implementation
                 {
                     if (currentTaskCount == 0)
                     {
-                        auto groupTask = winrt::make<winrt::vertical_tasks::implementation::TaskVM>(hwnd,
+                        auto groupTask = winrt::make<winrt::vertical_tasks::implementation::TaskVM>(nullptr,
                             DispatcherQueue(), winrt::vertical_tasks::GroupId::GroupOne, true);
 
                         m_tasks->Append(groupTask);
@@ -237,7 +237,7 @@ namespace winrt::vertical_tasks::implementation
                 {
                     if (currentTaskCount == 4)
                     {
-                        auto groupTask = winrt::make<winrt::vertical_tasks::implementation::TaskVM>(hwnd,
+                        auto groupTask = winrt::make<winrt::vertical_tasks::implementation::TaskVM>(nullptr,
                             DispatcherQueue(), winrt::vertical_tasks::GroupId::GroupTwo, true);
 
                         m_tasks->Append(groupTask);
@@ -248,7 +248,7 @@ namespace winrt::vertical_tasks::implementation
                 }
                 else if (currentTaskCount == 7)
                 {
-                    auto groupTask = winrt::make<winrt::vertical_tasks::implementation::TaskVM>(hwnd,
+                    auto groupTask = winrt::make<winrt::vertical_tasks::implementation::TaskVM>(nullptr,
                         DispatcherQueue(), winrt::vertical_tasks::GroupId::GroupThree, true);
 
                     m_tasks->Append(groupTask);
@@ -329,12 +329,15 @@ namespace winrt::vertical_tasks::implementation
     //int i = 0;
     void MainWindow::myButton_Click(IInspectable const&, RoutedEventArgs const&)
     {
-        if (!g_initialized)
-        {
-            myButton().Content(box_value(L"Clicked"));
-            EnumWindows(&WindowEnumerationCallBack, reinterpret_cast<LPARAM>(this));
-            //m_tasks->sort();
+        
+        myButton().Content(box_value(L"Clicked"));
+        m_tasks->Clear();
+        EnumWindows(&WindowEnumerationCallBack, reinterpret_cast<LPARAM>(this));
+        //m_tasks->do_call_changed(Windows::Foundation::Collections::CollectionChange::Reset, 0u);
 
+        m_tasks->sort();
+        if (!m_shellHook)
+        { 
             m_shellHook = std::make_unique<ShellHookMessages>();
             m_shellHook->Register([weak_this = get_weak()](WPARAM wParam, LPARAM lParam)
                 {
@@ -344,11 +347,6 @@ namespace winrt::vertical_tasks::implementation
                     }
                 });
             g_initialized = true;
-        }
-        else
-        {
-            /*g_windows[i].ShowWindow();
-            i++;*/
         }
     }
 
@@ -393,19 +391,23 @@ namespace winrt::vertical_tasks::implementation
             // seleciton change from shell
             co_return;
         }
+		auto scope = selectionFromClick.onInScope();
 
         std::vector<HWND> windowsToShow;
-        {
-            auto scope = selectionFromClick.onInScope();
 
-            auto selection = myList().SelectedItems();
-            for (auto&& item : selection)
+        // auto scope = selectionFromClick.onInScope();
+
+        auto selection = myList().SelectedItems();
+        for (auto&& item : selection)
+        {
+            auto taskVM = item.as<vertical_tasks::implementation::TaskVM>();
+            // select window
+            if (taskVM->Hwnd())
             {
-                auto taskVM = item.as<vertical_tasks::implementation::TaskVM>();
-                // select window
                 windowsToShow.emplace_back(taskVM->Hwnd());
             }
         }
+        
         co_await winrt::resume_background();
 
         if (windowsToShow.size() == 0)
@@ -460,7 +462,15 @@ namespace winrt::vertical_tasks::implementation
 
         if (found != m_tasks->end())
         {
-            myList().SelectedItem(*found);
+			auto taskVM = found->as<vertical_tasks::implementation::TaskVM>();
+            if (taskVM->ProcessName().find(L"devenv") != std::wstring::npos)
+            {
+                // skip visual studio. 
+            }
+            else
+            {
+                myList().SelectedItem(*found);
+            }
         }
         else
         {

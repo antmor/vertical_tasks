@@ -65,6 +65,18 @@ namespace winrt::vertical_tasks::implementation
             std::sort(begin(), end(),
                 [](const auto& l, const auto& r)
                 {
+                    auto lt = l.as<winrt::vertical_tasks::implementation::TaskVM>();
+                    auto rt = r.as<winrt::vertical_tasks::implementation::TaskVM>();
+                    if (lt->Group() != rt->Group())
+                    {
+                        return lt->Group() < rt->Group();
+                    }
+                    // same group, return the header first
+                    if (lt->IsGroupId() || rt->IsGroupId())
+                    { 
+                        return lt->IsGroupId();
+                    }
+                    // TODO index in group
                     auto ls = l.as<winrt::vertical_tasks::implementation::TaskVM>()->ProcessName();
                     auto rs = r.as<winrt::vertical_tasks::implementation::TaskVM>()->ProcessName();
                     return CSTR_LESS_THAN == CompareStringOrdinal(ls.data(), static_cast<int>(ls.size()), rs.data(), static_cast<int>(rs.size()), TRUE);
