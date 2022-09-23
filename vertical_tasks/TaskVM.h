@@ -2,6 +2,7 @@
 #include <pch.h>
 
 #include "TaskVM.g.h"
+#include <wil\resource.h>
 
 
 namespace winrt::vertical_tasks::implementation
@@ -10,6 +11,17 @@ namespace winrt::vertical_tasks::implementation
     {
         TaskVM(HWND hwnd, winrt::Microsoft::UI::Dispatching::DispatcherQueue uiThread): m_hwnd(reinterpret_cast<HWND>(hwnd)), m_uiThread(uiThread)
         {
+            DWORD dwWindowProcessId;
+            GetWindowThreadProcessId(hwnd, &dwWindowProcessId);
+            wil::unique_handle handle ( OpenProcess(PROCESS_QUERY_INFORMATION, FALSE, dwWindowProcessId));
+            THROW_LAST_ERROR_IF(!handle);
+
+            WCHAR buffer[MAX_PATH] = {};
+            DWORD bufSize = MAX_PATH;
+            if (QueryFullProcessImageName(handle.get(), 0, buffer, &bufSize))
+            {
+                m_procName = std::wstring(std::begin(buffer), std::end(buffer));
+            }
             RefreshTitle(false);
         }
 
@@ -42,8 +54,14 @@ namespace winrt::vertical_tasks::implementation
         {
             return m_hwnd;
         }
+
+        std::wstring_view ProcessName() const
+        {
+            return m_procName;
+        }
     private:
         HWND m_hwnd;
+        std::wstring m_procName;
         winrt::weak_ref<winrt::Microsoft::UI::Dispatching::DispatcherQueue> m_uiThread{ nullptr };
 
         winrt::hstring m_title;
