@@ -92,13 +92,24 @@ namespace winrt::vertical_tasks::implementation
             SendMessageTimeout(hwnd, WM_GETICON, ICON_SMALL, 0, SMTO_BLOCK | SMTO_ABORTIFHUNG,
                 500/*ms*/, reinterpret_cast<PDWORD_PTR>(&icon));
         }
+        if (!icon)
+        {
+            co_return;
+        }
+
         wil::unique_hicon iconCopy(CopyIcon(icon));
         auto bitmap = co_await GetBitmapFromIconFileAsync(std::move(iconCopy));
+        if ((bitmap.BitmapPixelFormat() != BitmapPixelFormat::Bgra8) ||
+            (bitmap.BitmapAlphaMode() != BitmapAlphaMode::Premultiplied))
+        {
+            bitmap = SoftwareBitmap::Convert(bitmap, BitmapPixelFormat::Bgra8, BitmapAlphaMode::Premultiplied);
+        }
+        co_await wil::resume_foreground(DispatcherQueue());
 
         Microsoft::UI::Xaml::Media::Imaging::SoftwareBitmapSource source{};
         co_await source.SetBitmapAsync(bitmap);
-
         co_await wil::resume_foreground(DispatcherQueue());
+
         auto found = m_tasks->find(hwnd);
 
         if (found != m_tasks->end())
