@@ -14,15 +14,16 @@ namespace winrt::vertical_tasks::implementation
             DWORD dwWindowProcessId;
             GetWindowThreadProcessId(hwnd, &dwWindowProcessId);
             wil::unique_handle handle ( OpenProcess(PROCESS_QUERY_INFORMATION, FALSE, dwWindowProcessId));
-            THROW_LAST_ERROR_IF(!handle);
-
-            WCHAR buffer[MAX_PATH] = {};
-            DWORD bufSize = MAX_PATH;
-            if (QueryFullProcessImageName(handle.get(), 0, buffer, &bufSize))
+            if (handle)
             {
-                m_procName = std::wstring(std::begin(buffer), std::end(buffer));
+                WCHAR buffer[MAX_PATH] = {};
+                DWORD bufSize = MAX_PATH;
+                if (QueryFullProcessImageName(handle.get(), 0, buffer, &bufSize))
+                {
+                    m_procName = std::wstring(std::begin(buffer), std::end(buffer));
+                }
+                RefreshTitle(false);
             }
-            RefreshTitle(false);
         }
 
         hstring Title() const
@@ -30,16 +31,22 @@ namespace winrt::vertical_tasks::implementation
             return m_title;
         };
         
-        winrt::Microsoft::UI::Xaml::Controls::IconSource IconSource() const
+
+        Microsoft::UI::Xaml::Media::Imaging::SoftwareBitmapSource IconSource()
         {
             return m_iconSource;
         };
 
+        void IconSource(Microsoft::UI::Xaml::Media::Imaging::SoftwareBitmapSource const& value)
+        {
+            m_iconSource = value;
+            OnPropertyChanged(L"IconSource");
+        }
         void Select();
         void Close();
+        void Minimize();
 
         winrt::fire_and_forget RefreshTitle(bool update = true);
-
 
         winrt::event_token PropertyChanged(winrt::Microsoft::UI::Xaml::Data::PropertyChangedEventHandler const& handler)
         {
@@ -66,9 +73,8 @@ namespace winrt::vertical_tasks::implementation
 
         winrt::hstring m_title;
         wil::unique_hicon m_icon;
-        winrt::Microsoft::UI::Xaml::Controls::IconSource m_iconSource{nullptr};
 
-
+        winrt::Microsoft::UI::Xaml::Media::Imaging::SoftwareBitmapSource m_iconSource{nullptr};
         winrt::event<Microsoft::UI::Xaml::Data::PropertyChangedEventHandler> m_propertyChanged;
         void OnPropertyChanged(winrt::hstring propertyName)
         {

@@ -28,14 +28,14 @@
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
-                        <Ellipse x:Name="Ellipse"
+                        <Image Name="AppIcon" 
                             Grid.RowSpan="2"
                             Width ="16"
                             Height="16"
                             Margin="2,0,2,0"
                             VerticalAlignment="Center"
                             HorizontalAlignment="Center"
-                            Fill="{ThemeResource SystemControlBackgroundBaseMediumBrush}"/>
+                            Source ="{x:Bind IconSource}"/>
                         <TextBlock Grid.Column="1"
                             Text="{x:Bind Title, Mode=OneWay}"
                             Style="{ThemeResource BaseTextBlockStyle}"
@@ -53,12 +53,15 @@
                             </Button.Content>
                             <Button.Flyout>
                                 <MenuFlyout>
-                                    <MenuFlyoutItem
-                                        Click="{x:Bind Close, Mode=OneWay}">
+                                    <MenuFlyoutItem Text="Close window" Click="{x:Bind Close}">
                                         <MenuFlyoutItem.Icon>
-                                            <FontIcon Glyph="&#xE8BB;"/>
+                                            <FontIcon Glyph="&#xe711;"/>
                                         </MenuFlyoutItem.Icon>
-                                        
+                                    </MenuFlyoutItem>
+                                    <MenuFlyoutItem Text="Minimize window" Click="{x:Bind Minimize}">
+                                        <MenuFlyoutItem.Icon>
+                                            <FontIcon Glyph="&#xe738;"/>
+                                        </MenuFlyoutItem.Icon>
                                     </MenuFlyoutItem>
                                 </MenuFlyout>
                             </Button.Flyout>

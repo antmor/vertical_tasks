@@ -74,7 +74,6 @@ namespace winrt::vertical_tasks::implementation
     {
         MainWindow();
 
-
         void myButton_Click(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         winrt::fire_and_forget OnItemClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::Controls::ItemClickEventArgs const& args);
         winrt::fire_and_forget OnSelectionChanged(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::Controls::SelectionChangedEventArgs const& args);
@@ -87,11 +86,12 @@ namespace winrt::vertical_tasks::implementation
         void RenameItem(HWND hwnd);
 
     private:
+        Windows::Foundation::IAsyncOperation<Windows::Graphics::Imaging::SoftwareBitmap> GetBitmapFromIconFileAsync(wil::unique_hicon hicon);
         winrt::fire_and_forget OnShellMessage(WPARAM wParam, LPARAM lParam);
         winrt::fire_and_forget FetchIcon(HWND hwnd);
 
         winrt::com_ptr<MyTasks> m_tasks{ winrt::make_self<MyTasks>() };
-        
+
         struct scope_toggle
         {
             operator bool()

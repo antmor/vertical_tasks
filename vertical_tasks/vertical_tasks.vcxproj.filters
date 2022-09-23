@@ -20,6 +20,7 @@
     <ClInclude Include="ShellHookMessages.h" />
     <ClInclude Include="TaskVM.h" />
     <ClInclude Include="PositioningHelpers.h" />
+    <ClInclude Include="ImageHelper.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Assets">
