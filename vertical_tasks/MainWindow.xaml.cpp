@@ -3,30 +3,199 @@
 #if __has_include("MainWindow.g.cpp")
 #include "MainWindow.g.cpp"
 #endif
+#include "ImageHelper.h"
 
 #include <microsoft.ui.xaml.window.h>
+#include <dispatcherqueue.h>
+
+#include <winrt/microsoft.ui.xaml.media.imaging.h>
+#include <winrt/Windows.Foundation.Collections.h>
 
 #include <winrt\microsoft.ui.xaml.h>
 #include <winrt\windows.ui.core.h>
+#include <winrt\microsoft.ui.h>
+#include <winrt\microsoft.ui.windowing.h>
+#include <winrt\microsoft.ui.interop.h>
 #include <wil\cppwinrt_helpers.h>
 
-#include "ShellHookMessages.h"
-
 #include <sstream>
+#include "winuser.h"
 
 #include <TaskVM.h>
+
+#include "PositioningHelpers.h"
+
+
 namespace winrt
 {
     using namespace Microsoft::UI::Xaml;
+    using namespace Microsoft::UI::Xaml::Controls;
+    using namespace Windows::Foundation;
+    using namespace Windows::UI::Xaml::Media::Imaging;
+    using namespace Windows::Storage::Streams;
+    using namespace Windows::Graphics::Imaging;
 }
 // To learn more about WinUI, the WinUI project structure,
-// and more about our project templates, see: http://aka.ms/winui-project-info.
+// and more about our project templates, see: http://aka.ms/winui-project-info
+
+inline BOOL IsToolWindow(HWND m_hwnd)
+{
+    return (GetWindowLong(m_hwnd, GWL_EXSTYLE) &
+        WS_EX_TOOLWINDOW) ==
+        WS_EX_TOOLWINDOW;
+}
+
+/// Gets a value indicating whether the window is an appwindow
+inline BOOL IsAppWindow(HWND m_hwnd)
+{
+    return (GetWindowLong(m_hwnd, GWL_EXSTYLE) &
+        WS_EX_APPWINDOW) == WS_EX_APPWINDOW;
+}
+
+inline BOOL TaskListDeleted(HWND m_hwnd)
+{
+    return GetProp(m_hwnd, L"ITaskList_Deleted") != NULL;
+}
 
 namespace winrt::vertical_tasks::implementation
 {
+    winrt::MUCSB::SystemBackdropTheme ConvertToSystemBackdropTheme(
+        winrt::MUX::ElementTheme const& theme)
+    {
+        switch (theme)
+        {
+        case winrt::MUX::ElementTheme::Dark:
+            return winrt::MUCSB::SystemBackdropTheme::Dark;
+        case winrt::MUX::ElementTheme::Light:
+            return winrt::MUCSB::SystemBackdropTheme::Light;
+        default:
+            return winrt::MUCSB::SystemBackdropTheme::Default;
+        }
+    }
+
+    winrt::WS::DispatcherQueueController CreateSystemDispatcherQueueController()
+    {
+        DispatcherQueueOptions options
+        {
+            sizeof(DispatcherQueueOptions),
+            DQTYPE_THREAD_CURRENT,
+            DQTAT_COM_NONE
+        };
+
+        ::ABI::Windows::System::IDispatcherQueueController* ptr{ nullptr };
+        winrt::check_hresult(CreateDispatcherQueueController(options, &ptr));
+        return { ptr, take_ownership_from_abi };
+    }
+
     MainWindow::MainWindow()
     {
         InitializeComponent();
+        auto windowNative{ this->try_as<::IWindowNative>() };
+        winrt::check_bool(windowNative);
+        windowNative->get_WindowHandle(&m_hwnd);
+
+        if (winrt::Microsoft::UI::Windowing::AppWindowTitleBar::IsCustomizationSupported())
+        {
+            winrt::Microsoft::UI::WindowId windowId =
+                winrt::Microsoft::UI::GetWindowIdFromWindow(m_hwnd);
+
+            // Lastly, retrieve the AppWindow for the current (XAML) WinUI 3 window.
+            winrt::Microsoft::UI::Windowing::AppWindow appWindow =
+                winrt::Microsoft::UI::Windowing::AppWindow::GetFromWindowId(windowId);
+
+
+            if (appWindow)
+            {
+                // You now have an AppWindow object, and you can call its methods to manipulate the window.
+                // As an example, let's change the title text of the window.
+                appWindow.TitleBar().ExtendsContentIntoTitleBar(true);
+            }
+            EnableMenuItem(GetSystemMenu(m_hwnd, FALSE), SC_CLOSE,
+                MF_BYCOMMAND | MF_DISABLED | MF_GRAYED);
+
+                SetWindowLong(m_hwnd, GWL_STYLE,
+                    GetWindowLong(m_hwnd, GWL_STYLE) & ~WS_MINIMIZEBOX);
+      
+            
+                SetWindowLong(m_hwnd, GWL_STYLE,
+                    GetWindowLong(m_hwnd, GWL_STYLE) & ~WS_MAXIMIZEBOX);
+
+        }
+
+        m_mon = MonitorFromWindow(m_hwnd, MONITOR_DEFAULTTONULL);
+        MONITORINFOEXW monitorInfo{ sizeof(MONITORINFOEXW) };
+        THROW_IF_WIN32_BOOL_FALSE(GetMonitorInfoW(m_mon, &monitorInfo));
+        auto sideBarRect = monitorInfo.rcWork;
+        m_left = ConvertDPI(m_mon, 300);
+        sideBarRect.right = sideBarRect.left + m_left;
+        SizeWindowToRect(m_hwnd, sideBarRect);
+
+        if (winrt::MUCSB::MicaController::IsSupported())
+        {
+            // We ensure that there is a Windows.System.DispatcherQueue on the current thread.
+                     // Always check if one already exists before attempting to create a new one.
+            if (nullptr == winrt::WS::DispatcherQueue::GetForCurrentThread() &&
+                nullptr == m_dispatcherQueueController)
+            {
+                m_dispatcherQueueController = CreateSystemDispatcherQueueController();
+            }
+
+            // Setup the SystemBackdropConfiguration object.
+            SetupSystemBackdropConfiguration();
+
+            // Setup Mica on the current Window.
+            m_backdropController = winrt::MUCSB::MicaController();
+            m_backdropController.SetSystemBackdropConfiguration(m_configuration);
+            m_backdropController.AddSystemBackdropTarget(
+                this->try_as<winrt::MUC::ICompositionSupportsSystemBackdrop>());
+
+            m_closedRevoker = this->Closed(winrt::auto_revoke, [&](auto&&, auto&&)
+                {
+                    if (nullptr != m_backdropController)
+                    {
+                        m_backdropController.Close();
+                        m_backdropController = nullptr;
+                    }
+
+                    if (nullptr != m_dispatcherQueueController)
+                    {
+                        m_dispatcherQueueController.ShutdownQueueAsync();
+                        m_dispatcherQueueController = nullptr;
+                    }
+                });
+        }
+    }
+
+    void MainWindow::SetupSystemBackdropConfiguration()
+    {
+        m_configuration = winrt::MUCSB::SystemBackdropConfiguration();
+
+        // Activation state.
+        m_activatedRevoker = this->Activated(winrt::auto_revoke,
+            [&](auto&&, MUX::WindowActivatedEventArgs const& args)
+            {
+                m_configuration.IsInputActive(
+                    winrt::MUX::WindowActivationState::Deactivated != args.WindowActivationState());
+            });
+
+        // Initial state.
+        m_configuration.IsInputActive(true);
+
+        // Application theme.
+        m_rootElement = this->Content().try_as<winrt::MUX::FrameworkElement>();
+        if (nullptr != m_rootElement)
+        {
+            m_themeChangedRevoker = m_rootElement.ActualThemeChanged(winrt::auto_revoke,
+                [&](auto&&, auto&&)
+                {
+                    m_configuration.Theme(
+                        ConvertToSystemBackdropTheme(m_rootElement.ActualTheme()));
+                });
+
+            // Initial state.
+            m_configuration.Theme(
+                ConvertToSystemBackdropTheme(m_rootElement.ActualTheme()));
+        }
     }
 
     UINT g_shellHookMsgId{ UINT_MAX };
@@ -35,7 +204,9 @@ namespace winrt::vertical_tasks::implementation
     // returns true if window already existed
     winrt::vertical_tasks::TaskVM MainWindow::AddOrUpdateWindow(HWND hwnd, bool shouldUpdate)
     {
-        if (IsWindow(hwnd) && IsWindowVisible(hwnd) && (0 == GetWindow(hwnd, GW_OWNER)))
+
+        if ((hwnd != m_hwnd) && IsWindow(hwnd) && IsWindowVisible(hwnd) && (0 == GetWindow(hwnd, GW_OWNER)) &&
+            (!IsToolWindow(hwnd) || IsAppWindow(hwnd)) && !TaskListDeleted(hwnd))
         {
             auto found = m_tasks->find(hwnd);
 
@@ -53,10 +224,10 @@ namespace winrt::vertical_tasks::implementation
                 {
                     if (currentTaskCount == 0)
                     {
-                        winrt::vertical_tasks::TaskVM groupOne(reinterpret_cast<uint64_t>(nullptr),
-                            winrt::vertical_tasks::GroupId::GroupOne,
-                            true);
-                        m_tasks->Append(groupOne);
+                        auto groupTask = winrt::make<winrt::vertical_tasks::implementation::TaskVM>(hwnd,
+                            DispatcherQueue(), winrt::vertical_tasks::GroupId::GroupOne, true);
+
+                        m_tasks->Append(groupTask);
                         m_tasks->m_taskCount += 1;
                     }
 
@@ -66,10 +237,10 @@ namespace winrt::vertical_tasks::implementation
                 {
                     if (currentTaskCount == 4)
                     {
-                        winrt::vertical_tasks::TaskVM groupTwo(reinterpret_cast<uint64_t>(nullptr),
-                            winrt::vertical_tasks::GroupId::GroupTwo,
-                            true);
-                        m_tasks->Append(groupTwo);
+                        auto groupTask = winrt::make<winrt::vertical_tasks::implementation::TaskVM>(hwnd,
+                            DispatcherQueue(), winrt::vertical_tasks::GroupId::GroupTwo, true);
+
+                        m_tasks->Append(groupTask);
                         m_tasks->m_taskCount += 1;
                     }
 
@@ -77,25 +248,28 @@ namespace winrt::vertical_tasks::implementation
                 }
                 else if (currentTaskCount == 7)
                 {
-                    winrt::vertical_tasks::TaskVM groupThree(reinterpret_cast<uint64_t>(nullptr),
-                        winrt::vertical_tasks::GroupId::GroupThree,
-                        true);
-                    m_tasks->Append(groupThree);
+                    auto groupTask = winrt::make<winrt::vertical_tasks::implementation::TaskVM>(hwnd,
+                        DispatcherQueue(), winrt::vertical_tasks::GroupId::GroupThree, true);
+
+                    m_tasks->Append(groupTask);
                     m_tasks->m_taskCount += 1;
 
                     groupId = winrt::vertical_tasks::GroupId::GroupThree;
                 }
 
-                winrt::vertical_tasks::TaskVM newItem(reinterpret_cast<uint64_t>(hwnd),
-                    groupId,
-                    false);
+                auto newTask = winrt::make<winrt::vertical_tasks::implementation::TaskVM>(hwnd, 
+                    DispatcherQueue(), groupId, false);
+                auto newItem = newTask.as<winrt::vertical_tasks::TaskVM>();
+
+                FetchIcon(hwnd);
                 if (shouldUpdate)
                 {
-                    m_tasks->Append(newItem);
+                    m_tasks->get_container().push_back(newItem);
+                    // m_tasks->sort();
                 }
                 else
                 {
-                    // don't update, add to the internal
+                    // don't update, add to the internal list
                     m_tasks->get_container().push_back(newItem);
                 }
                 m_tasks->m_taskCount += 1;
@@ -126,16 +300,30 @@ namespace winrt::vertical_tasks::implementation
             SendMessageTimeout(hwnd, WM_GETICON, ICON_SMALL, 0, SMTO_BLOCK | SMTO_ABORTIFHUNG,
                 500/*ms*/, reinterpret_cast<PDWORD_PTR>(&icon));
         }
-        wil::unique_hicon iconCopy(CopyIcon(icon));
+        if (!icon)
+        {
+            co_return;
+        }
 
+        wil::unique_hicon iconCopy(CopyIcon(icon));
+        auto bitmap = co_await GetBitmapFromIconFileAsync(std::move(iconCopy));
+        if ((bitmap.BitmapPixelFormat() != BitmapPixelFormat::Bgra8) ||
+            (bitmap.BitmapAlphaMode() != BitmapAlphaMode::Premultiplied))
+        {
+            bitmap = SoftwareBitmap::Convert(bitmap, BitmapPixelFormat::Bgra8, BitmapAlphaMode::Premultiplied);
+        }
         co_await wil::resume_foreground(DispatcherQueue());
+
+        Microsoft::UI::Xaml::Media::Imaging::SoftwareBitmapSource source{};
+        co_await source.SetBitmapAsync(bitmap);
+        co_await wil::resume_foreground(DispatcherQueue());
+
         auto found = m_tasks->find(hwnd);
 
         if (found != m_tasks->end())
         {
-            //found->second.icon = std::move(iconCopy);
+            found->as<winrt::vertical_tasks::TaskVM>().IconSource(source);
         }
-        // TODO update icon in ViewModel
     }
 
     //int i = 0;
@@ -147,14 +335,15 @@ namespace winrt::vertical_tasks::implementation
             EnumWindows(&WindowEnumerationCallBack, reinterpret_cast<LPARAM>(this));
 
             m_tasks->do_call_changed(winrt::Windows::Foundation::Collections::CollectionChange::Reset, 0u);
+   
+            m_tasks->sort();
 
-
-            static ShellHookMessages s_myMessages;
-            s_myMessages.Register([weak_this = get_weak()](WPARAM wParam, LPARAM lParam)
+            m_shellHook = std::make_unique<ShellHookMessages>();
+            m_shellHook->Register([weak_this = get_weak()](WPARAM wParam, LPARAM lParam)
                 {
-                    auto strong_this = weak_this.get();
+                    if (auto strong = weak_this.get())
                     {
-                        strong_this->OnShellMessage(wParam, lParam);
+                        strong->OnShellMessage(wParam, lParam);
                     }
                 });
             g_initialized = true;
@@ -215,24 +404,52 @@ namespace winrt::vertical_tasks::implementation
             auto selection = myList().SelectedItems();
             for (auto&& item : selection)
             {
-                auto& taskVM = item.as<vertical_tasks::implementation::TaskVM>();
+                auto taskVM = item.as<vertical_tasks::implementation::TaskVM>();
                 // select window
                 windowsToShow.emplace_back(taskVM->Hwnd());
             }
         }
         co_await winrt::resume_background();
-        for (auto&& hwnd : windowsToShow)
-        {
-            SetForegroundWindow(hwnd);
 
-            if (!ShowWindow(hwnd, SW_RESTORE))
+        if (windowsToShow.size() == 0)
+        {
+        }
+        else if (windowsToShow.size() == 1)
+        {
+            SetForegroundWindow(windowsToShow[0]);
+
+            if (!ShowWindow(windowsToShow[0], SW_RESTORE))
             {
                 // ShowWindow doesn't work if the process is running elevated: fallback to SendMessage
-                SendMessage(hwnd, WM_SYSCOMMAND, SC_RESTORE, 0);
+                SendMessage(windowsToShow[0], WM_SYSCOMMAND, SC_RESTORE, 0);
             }
         }
-    }
+        else
+        {
+            auto mon = MonitorFromWindow(windowsToShow[0], MONITOR_DEFAULTTONULL);
+            MONITORINFOEXW monitorInfo{ sizeof(MONITORINFOEXW) };
+            THROW_IF_WIN32_BOOL_FALSE(GetMonitorInfoW(mon, &monitorInfo));
 
+            if (mon == m_mon)
+            {
+                monitorInfo.rcWork.left += m_left;
+            }
+            const auto rects = GetSplits(monitorInfo.rcWork, windowsToShow.size());
+            size_t i = 0;
+            for (auto&& hwnd : windowsToShow)
+            {
+                SetForegroundWindow(hwnd);
+
+                if (!ShowWindow(hwnd, SW_RESTORE))
+                {
+                    // ShowWindow doesn't work if the process is running elevated: fallback to SendMessage
+                    SendMessage(hwnd, WM_SYSCOMMAND, SC_RESTORE, 0);
+                }
+                SizeWindowToRect(hwnd, rects[i++]);
+            }
+        }
+        co_return;
+    }
 
     void MainWindow::SelectItem(HWND hwnd)
     {
@@ -254,7 +471,7 @@ namespace winrt::vertical_tasks::implementation
         }
     }
 
-    void  MainWindow::DeleteItem(HWND hwnd)
+    void MainWindow::DeleteItem(HWND hwnd)
     {
         auto found = m_tasks->find(hwnd);
 
@@ -262,8 +479,24 @@ namespace winrt::vertical_tasks::implementation
         {
             const auto indexToErase{ std::distance(m_tasks->begin(), found) };
             m_tasks->get_container().erase(found);
-            m_tasks->do_call_changed(Windows::Foundation::Collections::CollectionChange::ItemRemoved, indexToErase);
+            m_tasks->do_call_changed(Windows::Foundation::Collections::CollectionChange::ItemRemoved, 
+                static_cast<uint32_t>(indexToErase));
 
+        }
+        else
+        {
+            LOG_HR(E_ACCESSDENIED);
+        }
+    }
+
+    void MainWindow::RenameItem(HWND hwnd)
+    {
+        auto found = m_tasks->find(hwnd);
+
+        if (found != m_tasks->end())
+        {
+            auto taskVM = found->as<vertical_tasks::implementation::TaskVM>();
+            taskVM->RefreshTitle();
         }
         else
         {
@@ -275,11 +508,14 @@ namespace winrt::vertical_tasks::implementation
     {
         co_await wil::resume_foreground(DispatcherQueue());
         std::wstringstream myString;
-        myString << L"shell message: " << std::hex << wParam << L", " << lParam;
+        myString << L"shell message: " << wParam << L", " << std::hex << lParam;
         switch (wParam)
         {
         case HSHELL_WINDOWACTIVATED:
         case HSHELL_RUDEAPPACTIVATED:
+        {
+            SelectItem(reinterpret_cast<HWND>(lParam));
+        }
         break;
         case HSHELL_WINDOWCREATED:
         {
@@ -296,6 +532,12 @@ namespace winrt::vertical_tasks::implementation
             DeleteItem(reinterpret_cast<HWND>(lParam));
         }
         break;
+        case HSHELL_REDRAW:
+        {
+            // todo recalculate text and icon
+            RenameItem(reinterpret_cast<HWND>(lParam));
+        }
+        break;
         default:
         {
             myString << L" ! UNKNOWN";
@@ -304,7 +546,28 @@ namespace winrt::vertical_tasks::implementation
         }
         myString << std::endl;
         OutputDebugString(myString.str().c_str());
-
     }
+    
+    //Windows::Foundation::
+    winrt::IAsyncOperation<Windows::Graphics::Imaging::SoftwareBitmap> MainWindow::GetBitmapFromIconFileAsync(wil::unique_hicon hicon)
+    {
+        wil::com_ptr<IWICImagingFactory> wicImagingFactory;
+        THROW_IF_FAILED(CoCreateInstance(CLSID_WICImagingFactory, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&wicImagingFactory)));
 
+        wil::com_ptr<IWICBitmap> wicBitmap;
+        THROW_IF_FAILED(wicImagingFactory->CreateBitmapFromHICON(hicon.get(), &wicBitmap));
+
+        wil::com_ptr<IWICBitmapSource> wicBitmapSource;
+        wicBitmap.query_to(&wicBitmapSource);
+        THROW_HR_IF_NULL(E_UNEXPECTED, wicBitmapSource);
+
+        wil::com_ptr<IStream> stream;
+        THROW_IF_FAILED(GetStreamOfWICBitmapSource(wicImagingFactory.get(), wicBitmapSource.get(), GUID_ContainerFormatPng, &stream));
+        
+        winrt::IRandomAccessStream randomAccessStream{ nullptr };
+        THROW_IF_FAILED(CreateRandomAccessStreamOverStream(stream.get(), BSOS_DEFAULT, winrt::guid_of<winrt::IRandomAccessStream>(), winrt::put_abi(randomAccessStream)));
+
+        winrt::BitmapDecoder decoder = co_await winrt::BitmapDecoder::CreateAsync(randomAccessStream);
+        co_return co_await decoder.GetSoftwareBitmapAsync();
+    }
 }

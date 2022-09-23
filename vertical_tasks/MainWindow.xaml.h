@@ -2,11 +2,24 @@
 #include "MainWindow.g.h"
 #include <winrt\microsoft.ui.xaml.h>
 #include "TaskVM.h"
+#include <functional>
+#include "ShellHookMessages.h"
+
+#include <winrt\windows.system.h>
+#include <winrt\microsoft.ui.composition.h>
+#include <winrt\Microsoft.UI.Composition.SystemBackdrops.h>
+
+namespace winrt
+{
+    namespace MUC = Microsoft::UI::Composition;
+    namespace MUCSB = Microsoft::UI::Composition::SystemBackdrops;
+    namespace MUX = Microsoft::UI::Xaml;
+    namespace WS = Windows::System;
+};
 
 namespace winrt::vertical_tasks::implementation
 {
     using namespace Windows::Foundation::Collections;
-
     struct MyTasks : public implements<MyTasks, IObservableVector<IInspectable>, IVector<IInspectable>, IVectorView<IInspectable>, IIterable<IInspectable>>,
         winrt::observable_vector_base<MyTasks, IInspectable>
     {
@@ -46,6 +59,19 @@ namespace winrt::vertical_tasks::implementation
                 });
         }
 
+        void sort()
+        {
+            // resort
+            std::sort(begin(), end(),
+                [](const auto& l, const auto& r)
+                {
+                    auto ls = l.as<winrt::vertical_tasks::implementation::TaskVM>()->ProcessName();
+                    auto rs = r.as<winrt::vertical_tasks::implementation::TaskVM>()->ProcessName();
+                    return CSTR_LESS_THAN == CompareStringOrdinal(ls.data(), static_cast<int>(ls.size()), rs.data(), static_cast<int>(rs.size()), TRUE);
+                });
+            call_changed(Windows::Foundation::Collections::CollectionChange::Reset, 0u);
+        }
+
         void do_call_changed(Windows::Foundation::Collections::CollectionChange const change, uint32_t const index)
         {
             call_changed(change, index);
@@ -61,7 +87,6 @@ namespace winrt::vertical_tasks::implementation
     public:
         MainWindow();
 
-
         void myButton_Click(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
         winrt::fire_and_forget OnItemClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::Controls::ItemClickEventArgs const& args);
         winrt::fire_and_forget OnSelectionChanged(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::Controls::SelectionChangedEventArgs const& args);
@@ -71,15 +96,19 @@ namespace winrt::vertical_tasks::implementation
         winrt::vertical_tasks::TaskVM AddOrUpdateWindow(HWND hwnd, bool shouldUpdate = false);
         void SelectItem(HWND hwnd);
         void DeleteItem(HWND hwnd);
+
         void TaskClick(winrt::Windows::Foundation::IInspectable const& sender, winrt::Microsoft::UI::Xaml::RoutedEventArgs const& e);
 
 
+        void RenameItem(HWND hwnd);
+
     private:
+        Windows::Foundation::IAsyncOperation<Windows::Graphics::Imaging::SoftwareBitmap> GetBitmapFromIconFileAsync(wil::unique_hicon hicon);
         winrt::fire_and_forget OnShellMessage(WPARAM wParam, LPARAM lParam);
         winrt::fire_and_forget FetchIcon(HWND hwnd);
 
         winrt::com_ptr<MyTasks> m_tasks{ winrt::make_self<MyTasks>() };
-        
+
         struct scope_toggle
         {
             operator bool()
@@ -96,10 +125,22 @@ namespace winrt::vertical_tasks::implementation
             bool toggle{ false };
 
         };
-
+        
+        HWND m_hwnd;
+        HMONITOR m_mon;
+        long m_left;
+        std::unique_ptr<ShellHookMessages> m_shellHook;
         scope_toggle selectionFromShell;
         scope_toggle selectionFromClick;
 
+        winrt::MUCSB::SystemBackdropConfiguration m_configuration{ nullptr };
+        winrt::MUCSB::MicaController m_backdropController{ nullptr };
+        winrt::MUX::Window::Activated_revoker m_activatedRevoker;
+        winrt::MUX::Window::Closed_revoker m_closedRevoker;
+        winrt::MUX::FrameworkElement::ActualThemeChanged_revoker m_themeChangedRevoker;
+        winrt::MUX::FrameworkElement m_rootElement{ nullptr };
+        winrt::WS::DispatcherQueueController m_dispatcherQueueController{ nullptr };
+        void SetupSystemBackdropConfiguration();
     };
 }
 

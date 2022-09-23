@@ -4,18 +4,20 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:local="using:vertical_tasks"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    mc:Ignorable="d">
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"       
+    xmlns:muxc="using:Microsoft.UI.Xaml.Controls"
+    mc:Ignorable="d"
+    >
 
-    <StackPanel Orientation="Horizontal" HorizontalAlignment="Stretch" VerticalAlignment="Center">
+    <StackPanel Orientation="Vertical" HorizontalAlignment="Left" VerticalAlignment="Bottom">
         <Button x:Name="myButton" Click="myButton_Click">Click Me</Button>
         <ListView x:Name="myList" 
+                  SelectionMode="Extended"
                   ItemsSource="{x:Bind Tasks}" 
                   HorizontalAlignment="Stretch"
                   CanDragItems="True"
-                    CanReorderItems="True"
-                    AllowDrop="True"
-                    SelectionMode="Extended"
+                  CanReorderItems="True"
+                  AllowDrop="True"
                   >
             <ListView.ItemTemplate>
                 <DataTemplate x:DataType="local:TaskVM">
@@ -50,33 +52,34 @@
                         <Grid.RowDefinitions>
                             <RowDefinition Height="20"/>
                         </Grid.RowDefinitions>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Text="     > "
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="     > "
                                Visibility="{x:Bind IsGroupedTask}"
                                FontFamily="Segoe UI Variable Static Small"
                                FontSize="14"
                                HorizontalAlignment="Left"/>
-                        <Ellipse Grid.Column="1" x:Name="Ellipse"
-                            Grid.RowSpan="2"
-                            Width ="16"
-                            Height="16"
-                            Margin="2,0,2,0"
-                            VerticalAlignment="Center"
-                            HorizontalAlignment="Center"
-                            Fill="{ThemeResource SystemControlBackgroundBaseMediumBrush}"/>
-                        <TextBlock Grid.Column="2"
-                            Text="{x:Bind Title}"
-                            Style="{ThemeResource BaseTextBlockStyle}"
+                            <Image Name="AppIcon" 
+                               Grid.RowSpan="2"
+                               Width ="16"
+                               Height="16"
+                               Margin="2,0,2,0"
+                               VerticalAlignment="Center"
+                               HorizontalAlignment="Center"
+                               Grid.Column="1"
+                               Source ="{x:Bind IconSource}"/>
+                           <TextBlock Grid.Column="2"
+                               Text="{x:Bind Title, Mode=OneWay}"
+                               Style="{ThemeResource BaseTextBlockStyle}"
                                    TextTrimming="CharacterEllipsis"
                                    FontSize="12"
-                            Margin="6,0,0,0"
+                               Margin="6,0,0,0"
                                    HorizontalAlignment="Stretch"/>
-                        <Button Grid.Column="3"
+                            <Button Grid.Column="3"
                                 Width="20"
                                 Margin="0,0,0,0"
                                 Padding="0,0,0,0"
@@ -87,9 +90,14 @@
                             </Button.Content>
                             <Button.Flyout>
                                 <MenuFlyout>
-                                    <MenuFlyoutItem>
+                                    <MenuFlyoutItem Text="Close window" Click="{x:Bind Close}">
                                         <MenuFlyoutItem.Icon>
-                                            <FontIcon Glyph="&#xE8BB;"/>
+                                            <FontIcon Glyph="&#xe711;"/>
+                                        </MenuFlyoutItem.Icon>
+                                    </MenuFlyoutItem>
+                                    <MenuFlyoutItem Text="Minimize window" Click="{x:Bind Minimize}">
+                                        <MenuFlyoutItem.Icon>
+                                            <FontIcon Glyph="&#xe738;"/>
                                         </MenuFlyoutItem.Icon>
                                     </MenuFlyoutItem>
                                 </MenuFlyout>
