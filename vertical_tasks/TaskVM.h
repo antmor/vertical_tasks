@@ -29,7 +29,7 @@ namespace winrt::vertical_tasks::implementation
         winrt::fire_and_forget RefreshTitle(bool update = true);
 
 
-        winrt::event_token PropertyChanged(winrt::Windows::UI::Xaml::Data::PropertyChangedEventHandler const& handler)
+        winrt::event_token PropertyChanged(winrt::Microsoft::UI::Xaml::Data::PropertyChangedEventHandler const& handler)
         {
             return m_propertyChanged.add(handler);
         };
@@ -51,10 +51,10 @@ namespace winrt::vertical_tasks::implementation
         winrt::Microsoft::UI::Xaml::Controls::IconSource m_iconSource{nullptr};
 
 
-        winrt::event<Windows::UI::Xaml::Data::PropertyChangedEventHandler> m_propertyChanged;
+        winrt::event<Microsoft::UI::Xaml::Data::PropertyChangedEventHandler> m_propertyChanged;
         void OnPropertyChanged(winrt::hstring propertyName)
         {
-            m_propertyChanged(*this, winrt::Windows::UI::Xaml::Data::PropertyChangedEventArgs(propertyName));
+            m_propertyChanged(*this, winrt::Microsoft::UI::Xaml::Data::PropertyChangedEventArgs(propertyName));
         }
     };
 }

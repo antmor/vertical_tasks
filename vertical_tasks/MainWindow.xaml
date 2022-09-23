@@ -34,7 +34,7 @@
                             HorizontalAlignment="Center"
                             Fill="{ThemeResource SystemControlBackgroundBaseMediumBrush}"/>
                         <TextBlock Grid.Column="1"
-                            Text="{x:Bind Title}"
+                            Text="{x:Bind Title, Mode=OneWay}"
                             Style="{ThemeResource BaseTextBlockStyle}"
                                    TextTrimming="CharacterEllipsis"
                                    FontSize="12"
@@ -51,7 +51,7 @@
                             <Button.Flyout>
                                 <MenuFlyout>
                                     <MenuFlyoutItem
-                                        Click="{x:Bind Close}">
+                                        Click="{x:Bind Close, Mode=OneWay}">
                                         <MenuFlyoutItem.Icon>
                                             <FontIcon Glyph="&#xE8BB;"/>
                                         </MenuFlyoutItem.Icon>

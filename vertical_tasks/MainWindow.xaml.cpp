@@ -202,6 +202,21 @@ namespace winrt::vertical_tasks::implementation
         }
     }
 
+    void MainWindow::RenameItem(HWND hwnd)
+    {
+        auto found = m_tasks->find(hwnd);
+
+        if (found != m_tasks->end())
+        {
+            auto taskVM = found->as<vertical_tasks::implementation::TaskVM>();
+            taskVM->RefreshTitle();
+        }
+        else
+        {
+            LOG_HR(E_ACCESSDENIED);
+        }
+    }
+
     winrt::fire_and_forget MainWindow::OnShellMessage(WPARAM wParam, LPARAM lParam)
     {
         co_await wil::resume_foreground(DispatcherQueue());
@@ -233,6 +248,7 @@ namespace winrt::vertical_tasks::implementation
         case HSHELL_REDRAW: 
         {
             // todo recalculate text and icon
+            RenameItem(reinterpret_cast<HWND>(lParam));
         }
             break;
         default:

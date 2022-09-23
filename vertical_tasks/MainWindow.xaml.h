@@ -59,6 +59,8 @@ namespace winrt::vertical_tasks::implementation
         winrt::vertical_tasks::TaskVM AddOrUpdateWindow(HWND hwnd, bool shouldUpdate = false);
         void SelectItem(HWND hwnd);
         void DeleteItem(HWND hwnd);
+        void RenameItem(HWND hwnd);
+
 
     private:
         winrt::fire_and_forget OnShellMessage(WPARAM wParam, LPARAM lParam);
