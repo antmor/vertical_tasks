@@ -365,16 +365,40 @@ namespace winrt::vertical_tasks::implementation
                 Microsoft::UI::Xaml::Data::ItemIndexRange indexRange{ 0, 4u };
                 myList().SelectRange(indexRange);
             }
-            if (textBlock.Text() == L"Group Two")
+            else if (textBlock.Text() == L"Group Two")
             {
                 Microsoft::UI::Xaml::Data::ItemIndexRange indexRange{ 4, 3u };
                 myList().SelectRange(indexRange);
             }
-            if (textBlock.Text() == L"Group Three")
+            else if (textBlock.Text() == L"Group Three")
             {
                 Microsoft::UI::Xaml::Data::ItemIndexRange indexRange{ 7, 2u };
                 myList().SelectRange(indexRange);
             }
+			else
+			{
+				auto found = m_tasks->find(textBlock.Text());
+				if (found != m_tasks->end())
+				{
+					auto taskVM = found->as<vertical_tasks::implementation::TaskVM>();
+					WINDOWPLACEMENT wPos;
+					GetWindowPlacement(taskVM->Hwnd(), &wPos);
+
+					if ((wPos.showCmd == SW_MINIMIZE) || (wPos.showCmd == SW_SHOWMINIMIZED))
+					{
+						SetForegroundWindow(taskVM->Hwnd());
+						if (!ShowWindow(taskVM->Hwnd(), SW_RESTORE))
+						{
+							// ShowWindow doesn't work if the process is running elevated: fallback to SendMessage
+							SendMessage(taskVM->Hwnd(), WM_SYSCOMMAND, SC_RESTORE, 0);
+						}
+					}
+					else
+					{
+						taskVM->Minimize();
+					}
+				}
+			}
         }
     }
 
