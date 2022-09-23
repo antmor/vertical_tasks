@@ -1,11 +1,11 @@
 namespace vertical_tasks
 {
     [default_interface]
-    runtimeclass TaskVM : Windows.UI.Xaml.Data.INotifyPropertyChanged
+    runtimeclass TaskVM : Microsoft.UI.Xaml.Data.INotifyPropertyChanged
     {
         TaskVM(UInt64 hwnd);
         String Title{ get; };
-        Microsoft.UI.Xaml.Controls.IconSource IconSource{ get; };
+        Microsoft.UI.Xaml.Media.Imaging.SoftwareBitmapSource IconSource{ get; set; };
 
         void Select();
         void Close();

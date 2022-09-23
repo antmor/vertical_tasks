@@ -3,8 +3,11 @@
 #if __has_include("MainWindow.g.cpp")
 #include "MainWindow.g.cpp"
 #endif
+#include "ImageHelper.h"
 
 #include <microsoft.ui.xaml.window.h>
+#include <winrt/microsoft.ui.xaml.media.imaging.h>
+#include <winrt/Windows.Foundation.Collections.h>
 
 #include <winrt\microsoft.ui.xaml.h>
 #include <winrt\windows.ui.core.h>
@@ -19,6 +22,11 @@
 namespace winrt
 {
     using namespace Microsoft::UI::Xaml;
+    using namespace Microsoft::UI::Xaml::Controls;
+    using namespace Windows::Foundation;
+    using namespace Windows::UI::Xaml::Media::Imaging;
+    using namespace Windows::Storage::Streams;
+    using namespace Windows::Graphics::Imaging;
 }
 // To learn more about WinUI, the WinUI project structure,
 // and more about our project templates, see: http://aka.ms/winui-project-info.
@@ -49,6 +57,7 @@ namespace winrt::vertical_tasks::implementation
             else
             {
                 winrt::vertical_tasks::TaskVM newItem(reinterpret_cast<uint64_t>(hwnd));
+                FetchIcon(hwnd);
                 if (shouldUpdate)
                 {
                     m_tasks->Append(newItem);
@@ -85,16 +94,30 @@ namespace winrt::vertical_tasks::implementation
             SendMessageTimeout(hwnd, WM_GETICON, ICON_SMALL, 0, SMTO_BLOCK | SMTO_ABORTIFHUNG,
                 500/*ms*/, reinterpret_cast<PDWORD_PTR>(&icon));
         }
-        wil::unique_hicon iconCopy(CopyIcon(icon));
+        if (!icon)
+        {
+            co_return;
+        }
 
+        wil::unique_hicon iconCopy(CopyIcon(icon));
+        auto bitmap = co_await GetBitmapFromIconFileAsync(std::move(iconCopy));
+        if ((bitmap.BitmapPixelFormat() != BitmapPixelFormat::Bgra8) ||
+            (bitmap.BitmapAlphaMode() != BitmapAlphaMode::Premultiplied))
+        {
+            bitmap = SoftwareBitmap::Convert(bitmap, BitmapPixelFormat::Bgra8, BitmapAlphaMode::Premultiplied);
+        }
         co_await wil::resume_foreground(DispatcherQueue());
+
+        Microsoft::UI::Xaml::Media::Imaging::SoftwareBitmapSource source{};
+        co_await source.SetBitmapAsync(bitmap);
+        co_await wil::resume_foreground(DispatcherQueue());
+
         auto found = m_tasks->find(hwnd);
 
         if (found != m_tasks->end())
         {
-            //found->second.icon = std::move(iconCopy);
+            found->as<winrt::vertical_tasks::TaskVM>().IconSource(source);
         }
-        // TODO update icon in ViewModel
     }
 
     //int i = 0;
@@ -146,7 +169,7 @@ namespace winrt::vertical_tasks::implementation
             auto selection = myList().SelectedItems();
             for (auto&& item : selection)
             {
-                auto& taskVM = item.as<vertical_tasks::implementation::TaskVM>();
+                auto taskVM = item.as<vertical_tasks::implementation::TaskVM>();
                 // select window
                 windowsToShow.emplace_back(taskVM->Hwnd());
             }
@@ -240,5 +263,27 @@ namespace winrt::vertical_tasks::implementation
         OutputDebugString(myString.str().c_str());
 
     }
+    
+    //Windows::Foundation::
+    winrt::IAsyncOperation<Windows::Graphics::Imaging::SoftwareBitmap> MainWindow::GetBitmapFromIconFileAsync(wil::unique_hicon hicon)
+    {
+        wil::com_ptr<IWICImagingFactory> wicImagingFactory;
+        THROW_IF_FAILED(CoCreateInstance(CLSID_WICImagingFactory, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&wicImagingFactory)));
 
+        wil::com_ptr<IWICBitmap> wicBitmap;
+        THROW_IF_FAILED(wicImagingFactory->CreateBitmapFromHICON(hicon.get(), &wicBitmap));
+
+        wil::com_ptr<IWICBitmapSource> wicBitmapSource;
+        wicBitmap.query_to(&wicBitmapSource);
+        THROW_HR_IF_NULL(E_UNEXPECTED, wicBitmapSource);
+
+        wil::com_ptr<IStream> stream;
+        THROW_IF_FAILED(GetStreamOfWICBitmapSource(wicImagingFactory.get(), wicBitmapSource.get(), GUID_ContainerFormatPng, &stream));
+        
+        winrt::IRandomAccessStream randomAccessStream{ nullptr };
+        THROW_IF_FAILED(CreateRandomAccessStreamOverStream(stream.get(), BSOS_DEFAULT, winrt::guid_of<winrt::IRandomAccessStream>(), winrt::put_abi(randomAccessStream)));
+
+        winrt::BitmapDecoder decoder = co_await winrt::BitmapDecoder::CreateAsync(randomAccessStream);
+        co_return co_await decoder.GetSoftwareBitmapAsync();
+    }
 }
