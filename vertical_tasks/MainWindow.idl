@@ -5,7 +5,7 @@ namespace vertical_tasks
     {
         TaskVM(UInt64 hwnd);
         String Title{ get; };
-        Microsoft.UI.Xaml.Controls.IconSource IconSource{ get; };
+        Microsoft.UI.Xaml.Media.Imaging.SoftwareBitmapSource IconSource{ get; set; };
 
         void Select();
         void Close();

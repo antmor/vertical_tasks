@@ -19,6 +19,7 @@
     <ClInclude Include="pch.h" />
     <ClInclude Include="ShellHookMessages.h" />
     <ClInclude Include="TaskVM.h" />
+    <ClInclude Include="ImageHelper.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Assets">
