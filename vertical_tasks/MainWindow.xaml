@@ -50,10 +50,12 @@
                             </Button.Content>
                             <Button.Flyout>
                                 <MenuFlyout>
-                                    <MenuFlyoutItem>
+                                    <MenuFlyoutItem
+                                        Click="{x:Bind Close}">
                                         <MenuFlyoutItem.Icon>
                                             <FontIcon Glyph="&#xE8BB;"/>
                                         </MenuFlyoutItem.Icon>
+                                        
                                     </MenuFlyoutItem>
                                 </MenuFlyout>
                             </Button.Flyout>

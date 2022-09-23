@@ -8,36 +8,26 @@ namespace winrt::vertical_tasks::implementation
 {
     struct TaskVM : TaskVMT<TaskVM>
     {
-        TaskVM() = default;
-
-        TaskVM(uint64_t hwnd): m_hwnd(reinterpret_cast<HWND>(hwnd))
+        TaskVM(HWND hwnd, winrt::Microsoft::UI::Dispatching::DispatcherQueue uiThread): m_hwnd(reinterpret_cast<HWND>(hwnd)), m_uiThread(uiThread)
         {
-            const auto size = GetWindowTextLength(m_hwnd);
-            if (size > 0)
-            {
-                std::vector<wchar_t> buffer(size + 1);
-                GetWindowText(m_hwnd, buffer.data(), size + 1);
-
-                m_title = std::wstring_view(buffer.data(), buffer.size());
-            }
-            else
-            {
-                LOG_HR(E_INVALIDARG);
-            }
+            RefreshTitle(false);
         }
 
-        hstring Title()
+        hstring Title() const
         {
             return m_title;
         };
         
-        winrt::Microsoft::UI::Xaml::Controls::IconSource IconSource()
+        winrt::Microsoft::UI::Xaml::Controls::IconSource IconSource() const
         {
             return m_iconSource;
         };
 
         void Select();
         void Close();
+
+        winrt::fire_and_forget RefreshTitle(bool update = true);
+
 
         winrt::event_token PropertyChanged(winrt::Windows::UI::Xaml::Data::PropertyChangedEventHandler const& handler)
         {
@@ -48,22 +38,23 @@ namespace winrt::vertical_tasks::implementation
             m_propertyChanged.remove(token);
         };
 
-        HWND Hwnd()
+        HWND Hwnd() const
         {
             return m_hwnd;
         }
     private:
         HWND m_hwnd;
+        winrt::weak_ref<winrt::Microsoft::UI::Dispatching::DispatcherQueue> m_uiThread{ nullptr };
+
         winrt::hstring m_title;
         wil::unique_hicon m_icon;
         winrt::Microsoft::UI::Xaml::Controls::IconSource m_iconSource{nullptr};
-        winrt::event<Windows::UI::Xaml::Data::PropertyChangedEventHandler> m_propertyChanged;
 
-    };
-}
-namespace winrt::vertical_tasks::factory_implementation
-{
-    struct TaskVM : TaskVMT<TaskVM, implementation::TaskVM>
-    {
+
+        winrt::event<Windows::UI::Xaml::Data::PropertyChangedEventHandler> m_propertyChanged;
+        void OnPropertyChanged(winrt::hstring propertyName)
+        {
+            m_propertyChanged(*this, winrt::Windows::UI::Xaml::Data::PropertyChangedEventArgs(propertyName));
+        }
     };
 }

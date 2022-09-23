@@ -46,7 +46,8 @@ namespace winrt::vertical_tasks::implementation
             }
             else
             {
-                winrt::vertical_tasks::TaskVM newItem(reinterpret_cast<uint64_t>(hwnd));
+                auto newTask = winrt::make<winrt::vertical_tasks::implementation::TaskVM>(hwnd, DispatcherQueue());
+                auto newItem = newTask.as<winrt::vertical_tasks::TaskVM>();
                 if (shouldUpdate)
                 {
                     m_tasks->Append(newItem);
@@ -144,7 +145,7 @@ namespace winrt::vertical_tasks::implementation
             auto selection = myList().SelectedItems();
             for (auto&& item : selection)
             {
-                auto& taskVM = item.as<vertical_tasks::implementation::TaskVM>();
+                auto taskVM = item.as<vertical_tasks::implementation::TaskVM>();
                 // select window
                 windowsToShow.emplace_back(taskVM->Hwnd());
             }
@@ -191,7 +192,8 @@ namespace winrt::vertical_tasks::implementation
         {
             const auto indexToErase{ std::distance(m_tasks->begin(), found) };
             m_tasks->get_container().erase(found);
-            m_tasks->do_call_changed(Windows::Foundation::Collections::CollectionChange::ItemRemoved, indexToErase);
+            m_tasks->do_call_changed(Windows::Foundation::Collections::CollectionChange::ItemRemoved, 
+                static_cast<uint32_t>(indexToErase));
 
         }
         else
@@ -204,7 +206,7 @@ namespace winrt::vertical_tasks::implementation
     {
         co_await wil::resume_foreground(DispatcherQueue());
         std::wstringstream myString;
-        myString << L"shell message: " << std::hex << wParam << L", " << lParam;
+        myString << L"shell message: " << wParam << L", " << std::hex <<  lParam;
         switch (wParam)
         {
         case HSHELL_WINDOWACTIVATED:
@@ -226,6 +228,11 @@ namespace winrt::vertical_tasks::implementation
         case HSHELL_WINDOWDESTROYED:
         {
             DeleteItem(reinterpret_cast<HWND>(lParam));
+        }
+            break;
+        case HSHELL_REDRAW: 
+        {
+            // todo recalculate text and icon
         }
             break;
         default:
