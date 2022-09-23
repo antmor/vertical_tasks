@@ -68,16 +68,13 @@ namespace winrt::vertical_tasks::implementation
 
         inline BOOL IsToolWindow(HWND m_hwnd)
         {
-            return (GetWindowLong(m_hwnd, GWL_EXSTYLE) &
-                WS_EX_TOOLWINDOW) ==
-                WS_EX_TOOLWINDOW;
+            return WI_IsFlagSet(GetWindowLong(m_hwnd, GWL_EXSTYLE), WS_EX_TOOLWINDOW);
         }
 
         /// Gets a value indicating whether the window is an appwindow
         inline BOOL IsAppWindow(HWND m_hwnd)
         {
-            return (GetWindowLong(m_hwnd, GWL_EXSTYLE) &
-                WS_EX_APPWINDOW) == WS_EX_APPWINDOW;
+            return WI_IsFlagSet(GetWindowLong(m_hwnd, GWL_EXSTYLE), WS_EX_APPWINDOW);
         }
 
         inline BOOL TaskListDeleted(HWND m_hwnd)
