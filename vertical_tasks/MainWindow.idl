@@ -21,7 +21,11 @@ namespace vertical_tasks
 
         Boolean IsGroupId{ get; };
         Boolean IsTask{ get; };
-        Boolean IsGroupedTask{ get; };
+
+        //static Windows.UI.Xaml.DependencyProperty IsGroupedTaskProperty{ get; };
+        Boolean IsGroupedTask{ get; set; };
+
+        UInt32 GroupIndex{ get; set;  };
 
         void Select();
         void Close();

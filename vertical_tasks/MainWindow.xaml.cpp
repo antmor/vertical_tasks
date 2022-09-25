@@ -1,4 +1,5 @@
 ﻿#include "pch.h"
+
 #include "MainWindow.xaml.h"
 #if __has_include("MainWindow.g.cpp")
 #include "MainWindow.g.cpp"
@@ -24,6 +25,10 @@
 #include <TaskVM.h>
 
 #include "PositioningHelpers.h"
+
+#include <iostream>
+#include <iterator>
+#include <map>
 
 
 namespace winrt
@@ -200,10 +205,16 @@ namespace winrt::vertical_tasks::implementation
 
     UINT g_shellHookMsgId{ UINT_MAX };
     bool g_initialized{ false };
+    bool g_ungroupedTasksHeaderAdded{ false };
 
     // returns true if window already existed
     winrt::vertical_tasks::TaskVM MainWindow::AddOrUpdateWindow(HWND hwnd, bool shouldUpdate)
     {
+        if (!g_ungroupedTasksHeaderAdded)
+        {
+            m_tasksByGroup.insert({ m_ungroupedTaskHeader, winrt::single_threaded_observable_vector<winrt::vertical_tasks::TaskVM>()});
+            g_ungroupedTasksHeaderAdded = true;
+        }
 
         if ((hwnd != m_hwnd) && IsWindow(hwnd) && IsWindowVisible(hwnd) && (0 == GetWindow(hwnd, GW_OWNER)) &&
             (!IsToolWindow(hwnd) || IsAppWindow(hwnd)) && !TaskListDeleted(hwnd))
@@ -217,62 +228,24 @@ namespace winrt::vertical_tasks::implementation
             }
             else
             {
-                u_int currentTaskCount = m_tasks->m_taskCount;
                 winrt::vertical_tasks::GroupId groupId = winrt::vertical_tasks::GroupId::Ungrouped;
-
-                if (currentTaskCount < 4)
-                {
-                    if (currentTaskCount == 0)
-                    {
-                        auto groupTask = winrt::make<winrt::vertical_tasks::implementation::TaskVM>(nullptr,
-                            DispatcherQueue(), winrt::vertical_tasks::GroupId::GroupOne, true);
-
-                        m_tasks->Append(groupTask);
-                        m_tasks->m_taskCount += 1;
-                    }
-
-                    groupId = winrt::vertical_tasks::GroupId::GroupOne;
-                }
-                else if (currentTaskCount >= 4 && currentTaskCount < 7)
-                {
-                    if (currentTaskCount == 4)
-                    {
-                        auto groupTask = winrt::make<winrt::vertical_tasks::implementation::TaskVM>(nullptr,
-                            DispatcherQueue(), winrt::vertical_tasks::GroupId::GroupTwo, true);
-
-                        m_tasks->Append(groupTask);
-                        m_tasks->m_taskCount += 1;
-                    }
-
-                    groupId = winrt::vertical_tasks::GroupId::GroupTwo;
-                }
-                else if (currentTaskCount == 7)
-                {
-                    auto groupTask = winrt::make<winrt::vertical_tasks::implementation::TaskVM>(nullptr,
-                        DispatcherQueue(), winrt::vertical_tasks::GroupId::GroupThree, true);
-
-                    m_tasks->Append(groupTask);
-                    m_tasks->m_taskCount += 1;
-
-                    groupId = winrt::vertical_tasks::GroupId::GroupThree;
-                }
+                const int ungroupedTasks = m_tasksByGroup.at(m_ungroupedTaskHeader).Size();
 
                 auto newTask = winrt::make<winrt::vertical_tasks::implementation::TaskVM>(hwnd, 
-                    DispatcherQueue(), groupId, false);
+                    DispatcherQueue(), groupId, false, ungroupedTasks + 1);
                 auto newItem = newTask.as<winrt::vertical_tasks::TaskVM>();
 
                 FetchIcon(hwnd);
                 if (shouldUpdate)
                 {
                     m_tasks->get_container().push_back(newItem);
-                    // m_tasks->sort();
+                    m_tasks->sort();
                 }
                 else
                 {
                     // don't update, add to the internal list
                     m_tasks->get_container().push_back(newItem);
                 }
-                m_tasks->m_taskCount += 1;
                 return newItem;
             }
         }
@@ -348,6 +321,25 @@ namespace winrt::vertical_tasks::implementation
                 });
             g_initialized = true;
         }
+    }
+
+    void MainWindow::AddGroup(winrt::Windows::Foundation::IInspectable const& sender,
+        winrt::Microsoft::UI::Xaml::RoutedEventArgs const& /*e*/)
+    {
+        auto newGroup = winrt::make<winrt::vertical_tasks::implementation::TaskVM>(nullptr,
+            DispatcherQueue(), winrt::vertical_tasks::GroupId::GroupOne, true, 0);
+        auto group = newGroup.as<winrt::vertical_tasks::TaskVM>();
+
+        m_tasks->get_container().insert(m_tasks->get_container().begin(), group);
+        m_tasksByGroup.insert({ group, winrt::single_threaded_observable_vector<winrt::vertical_tasks::TaskVM>() });
+
+        auto menuItem = sender.as< Microsoft::UI::Xaml::Controls::MenuFlyoutItem>();
+        auto dataContext = menuItem.DataContext().as<winrt::vertical_tasks::TaskVM>();
+        dataContext.Group(winrt::vertical_tasks::GroupId::GroupOne);
+        dataContext.GroupIndex(1);
+        dataContext.IsGroupedTask(true);
+
+        m_tasks->sort();
     }
 
     void MainWindow::TaskClick(winrt::Windows::Foundation::IInspectable const& sender,

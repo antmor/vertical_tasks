@@ -67,9 +67,12 @@ namespace winrt::vertical_tasks::implementation
                 {
                     auto lt = l.as<winrt::vertical_tasks::implementation::TaskVM>();
                     auto rt = r.as<winrt::vertical_tasks::implementation::TaskVM>();
-                    if (lt->Group() != rt->Group())
+
+                    int lGroup = static_cast<int>(lt->Group());
+                    int rGroup = static_cast<int>(rt->Group());
+                    if (lGroup != rGroup)
                     {
-                        return lt->Group() < rt->Group();
+                        return lGroup < rGroup;
                     }
                     // same group, return the header first
                     if (lt->IsGroupId() || rt->IsGroupId())
@@ -103,14 +106,28 @@ namespace winrt::vertical_tasks::implementation
         winrt::fire_and_forget OnItemClick(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::Controls::ItemClickEventArgs const& args);
         winrt::fire_and_forget OnSelectionChanged(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::Controls::SelectionChangedEventArgs const& args);
 
-        IObservableVector<IInspectable> Tasks() { return m_tasks.as< winrt::Windows::Foundation::Collections::IObservableVector<IInspectable>>(); };
+        IObservableVector<IInspectable> Tasks() 
+        { 
+            return m_tasks.as< winrt::Windows::Foundation::Collections::IObservableVector<IInspectable>>(); 
+        };
+        std::map <winrt::vertical_tasks::TaskVM, winrt::Windows::Foundation::Collections::IObservableVector<winrt::vertical_tasks::TaskVM>> TasksByGroup()
+        {
+            return m_tasksByGroup;
+        };
+
+        // This must always exist in the m_tasksByGroup map but will not be apart of m_tasks, as it does not show up in the taskbar - it's just to help
+        // organize the ungrouped tasks
+        winrt::vertical_tasks::TaskVM UngroupedTasksHeader()
+        {
+            return m_ungroupedTaskHeader;
+        };
 
         winrt::vertical_tasks::TaskVM AddOrUpdateWindow(HWND hwnd, bool shouldUpdate = false);
         void SelectItem(HWND hwnd);
         void DeleteItem(HWND hwnd);
 
         void TaskClick(winrt::Windows::Foundation::IInspectable const& sender, winrt::Microsoft::UI::Xaml::RoutedEventArgs const& e);
-
+        void AddGroup(winrt::Windows::Foundation::IInspectable const& sender, winrt::Microsoft::UI::Xaml::RoutedEventArgs const& e);
 
         void RenameItem(HWND hwnd);
 
@@ -120,6 +137,9 @@ namespace winrt::vertical_tasks::implementation
         winrt::fire_and_forget FetchIcon(HWND hwnd);
 
         winrt::com_ptr<MyTasks> m_tasks{ winrt::make_self<MyTasks>() };
+        winrt::vertical_tasks::TaskVM m_ungroupedTaskHeader = (winrt::make<winrt::vertical_tasks::implementation::TaskVM>(nullptr,
+            DispatcherQueue(), winrt::vertical_tasks::GroupId::Ungrouped, true, 0)).as<winrt::vertical_tasks::TaskVM>();
+        std::map<winrt::vertical_tasks::TaskVM, winrt::Windows::Foundation::Collections::IObservableVector<winrt::vertical_tasks::TaskVM>> m_tasksByGroup;
 
         struct scope_toggle
         {

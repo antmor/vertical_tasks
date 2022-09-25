@@ -2,7 +2,6 @@
 #include "TaskVM.h"
 #include "TaskVM.g.cpp"
 
-
 namespace winrt::vertical_tasks::implementation
 {
     winrt::fire_and_forget TaskVM::RefreshTitle(bool update)

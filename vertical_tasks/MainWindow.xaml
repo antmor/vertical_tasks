@@ -11,6 +11,7 @@
 
     <StackPanel Orientation="Vertical" HorizontalAlignment="Left" VerticalAlignment="Center">
         <Button x:Name="myButton" Click="myButton_Click">Click Me</Button>
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
         <ListView x:Name="myList" 
                   SelectionMode="Extended"
                   ItemsSource="{x:Bind Tasks}" 
@@ -20,6 +21,7 @@
                   CanDragItems="True"
                   CanReorderItems="True"
                   AllowDrop="True"
+                  
                   >
             <ListView.ItemTemplate>
                 <DataTemplate x:DataType="local:TaskVM">
@@ -62,7 +64,7 @@
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
                             <TextBlock Text="     > "
-                               Visibility="{x:Bind IsGroupedTask}"
+                               Visibility="{x:Bind IsGroupedTask, Mode=OneWay}"
                                FontFamily="Segoe UI Variable Static Small"
                                FontSize="14"
                                HorizontalAlignment="Left"/>
@@ -74,7 +76,8 @@
                                VerticalAlignment="Center"
                                HorizontalAlignment="Center"
                                Grid.Column="1"
-                               Source ="{x:Bind IconSource, Mode=OneWay}"/>
+                               Source ="{x:Bind IconSource, Mode=OneWay}"
+                               Visibility="{x:Bind IsTask, Mode=OneWay}"/>
                            <TextBlock Grid.Column="2"
                                Text="{x:Bind Title, Mode=OneWay}"
                                Style="{ThemeResource BaseTextBlockStyle}"
@@ -83,13 +86,40 @@
                                Margin="6,0,0,0"
                                    HorizontalAlignment="Stretch"/>
                             <Button Grid.Column="3"
-                                Width="20"
-                                Margin="0,0,0,0"
+                                Height="15"
+                                Width="15"
+                                Margin="5,0,0,0"
                                 Padding="0,0,0,0"
                                 Visibility="{x:Bind IsTask}"
                             >
-                            <Button.Content>
-                                <FontIcon Glyph="&#xE00F;"/>
+                             <Button.Resources>
+                                        <ResourceDictionary>
+                                            <ResourceDictionary.ThemeDictionaries>
+                                                <ResourceDictionary x:Key="Light">
+                                                    <SolidColorBrush x:Key="ButtonBackground"
+                                                                        Color="Transparent"/>
+                                                    <SolidColorBrush x:Key="ButtonBackgroundPointerOver"
+                                                                        Color="Blue"/>
+                                                    <SolidColorBrush x:Key="ButtonBackgroundPressed"
+                                                                        Color="DarkBlue"/>
+                                                    <SolidColorBrush x:Key="ButtonBackgroundDisabled"
+                                                                        Color="Transparent"/>
+                                                </ResourceDictionary>
+                                                <ResourceDictionary x:Key="Dark">
+                                                    <SolidColorBrush x:Key="ButtonBackground"
+                                                                        Color="Transparent"/>
+                                                    <SolidColorBrush x:Key="ButtonBackgroundPointerOver"
+                                                                        Color="Blue"/>
+                                                    <SolidColorBrush x:Key="ButtonBackgroundPressed"
+                                                                        Color="DarkBlue"/>
+                                                    <SolidColorBrush x:Key="ButtonBackgroundDisabled"
+                                                                        Color="Transparent"/>
+                                                </ResourceDictionary>
+                                            </ResourceDictionary.ThemeDictionaries>
+                                        </ResourceDictionary>
+                                    </Button.Resources>
+                                    <Button.Content>
+                                <FontIcon Glyph="&#xE00F;" FontSize="12"/>
                             </Button.Content>
                             <Button.Flyout>
                                 <MenuFlyout>
@@ -103,7 +133,12 @@
                                             <FontIcon Glyph="&#xe738;"/>
                                         </MenuFlyoutItem.Icon>
                                     </MenuFlyoutItem>
-                                </MenuFlyout>
+                                            <MenuFlyoutItem Text="Add to new group" Click="AddGroup">
+                                                <MenuFlyoutItem.Icon>
+                                                    <FontIcon Glyph="&#xecc8;"/>
+                                                </MenuFlyoutItem.Icon>
+                                            </MenuFlyoutItem>
+                                        </MenuFlyout>
                             </Button.Flyout>
                         </Button>
                     </Grid>
@@ -111,6 +146,7 @@
                 </DataTemplate>
             </ListView.ItemTemplate>
         </ListView>
+     </ScrollViewer>
 
 
     </StackPanel>
