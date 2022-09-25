@@ -15,17 +15,18 @@
         <ListView x:Name="myList" 
                   SelectionMode="Extended"
                   ItemsSource="{x:Bind Tasks}" 
-                  ItemClick="OnItemClick"
                   SelectionChanged="OnSelectionChanged"
                   HorizontalAlignment="Stretch"
                   CanDragItems="True"
                   CanReorderItems="True"
                   AllowDrop="True"
-                  
+                  Width="250"
                   >
             <ListView.ItemTemplate>
                 <DataTemplate x:DataType="local:TaskVM">
-                    <Button Background="Transparent" BorderThickness="0" Click="TaskClick">
+                    <Button Background="Transparent" BorderThickness="0" Click="TaskClick"
+                            Margin="0" Padding="0" Width="200"
+                            HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
                         <Button.Resources>
                             <ResourceDictionary>
                                 <ResourceDictionary.ThemeDictionaries>
@@ -52,7 +53,7 @@
                                 </ResourceDictionary.ThemeDictionaries>
                             </ResourceDictionary>
                         </Button.Resources>
-                        <Grid Margin="0,0,0,0" Padding="0,0,0,0" HorizontalAlignment="Stretch">
+                        <Grid Margin="0,0,0,0" Padding="0,0,0,0" MinWidth="200">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="20"/>
                         </Grid.RowDefinitions>
@@ -63,11 +64,12 @@
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
-                            <TextBlock Text="     > "
+                            <TextBlock Text="       "
                                Visibility="{x:Bind IsGroupedTask, Mode=OneWay}"
                                FontFamily="Segoe UI Variable Static Small"
                                FontSize="14"
-                               HorizontalAlignment="Left"/>
+                               HorizontalAlignment="Left"
+                               />
                             <Image Name="AppIcon" 
                                Grid.RowSpan="2"
                                Width ="16"
@@ -77,14 +79,16 @@
                                HorizontalAlignment="Center"
                                Grid.Column="1"
                                Source ="{x:Bind IconSource, Mode=OneWay}"
-                               Visibility="{x:Bind IsTask, Mode=OneWay}"/>
+                               Visibility="{x:Bind IsTask, Mode=OneWay}"
+                                   />
                            <TextBlock Grid.Column="2"
                                Text="{x:Bind Title, Mode=OneWay}"
                                Style="{ThemeResource BaseTextBlockStyle}"
-                                   TextTrimming="CharacterEllipsis"
-                                   FontSize="12"
+                               HorizontalAlignment="Left"
+                               TextTrimming="CharacterEllipsis"
+                               FontSize="12"
                                Margin="6,0,0,0"
-                                   HorizontalAlignment="Stretch"/>
+                               MaxWidth="150"/>
                             <Button Grid.Column="3"
                                 Height="15"
                                 Width="15"
@@ -133,12 +137,24 @@
                                             <FontIcon Glyph="&#xe738;"/>
                                         </MenuFlyoutItem.Icon>
                                     </MenuFlyoutItem>
-                                            <MenuFlyoutItem Text="Add to new group" Click="AddGroup">
-                                                <MenuFlyoutItem.Icon>
-                                                    <FontIcon Glyph="&#xecc8;"/>
-                                                </MenuFlyoutItem.Icon>
-                                            </MenuFlyoutItem>
+                                     <MenuFlyoutItem Visibility="{x:Bind IsTask, Mode=OneWay}" 
+                                                     Text="Add to new group" Click="AddGroup">
+                                         <MenuFlyoutItem.Icon>
+                                            <FontIcon Glyph="&#xecc8;"/>
+                                         </MenuFlyoutItem.Icon>
+                                     </MenuFlyoutItem>
+                                            <MenuFlyoutSubItem Text="Move to group" Visibility="{x:Bind IsTask, Mode=OneWay}" >
+                                         <MenuFlyoutSubItem.Icon>
+                                             <FontIcon Glyph="&#xe8de;"/>
+                                         </MenuFlyoutSubItem.Icon>
+                                          <MenuFlyoutItem Text="Group One" Click="MoveToGroup" />
+                                          <MenuFlyoutItem Text="Group Two" Click="MoveToGroup"/>
+                                          <MenuFlyoutItem Text="Group Three" Click="MoveToGroup"/>
+                                          <MenuFlyoutItem Text="Group Four" Click="MoveToGroup"/>
+                                      </MenuFlyoutSubItem>
+                                    
                                         </MenuFlyout>
+
                             </Button.Flyout>
                         </Button>
                     </Grid>

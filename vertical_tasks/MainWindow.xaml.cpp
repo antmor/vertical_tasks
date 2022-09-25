@@ -235,6 +235,8 @@ namespace winrt::vertical_tasks::implementation
                     DispatcherQueue(), groupId, false, ungroupedTasks + 1);
                 auto newItem = newTask.as<winrt::vertical_tasks::TaskVM>();
 
+                m_tasksByGroup.at(m_ungroupedTaskHeader).Append(newItem);
+
                 FetchIcon(hwnd);
                 if (shouldUpdate)
                 {
@@ -246,6 +248,7 @@ namespace winrt::vertical_tasks::implementation
                     // don't update, add to the internal list
                     m_tasks->get_container().push_back(newItem);
                 }
+
                 return newItem;
             }
         }
@@ -326,18 +329,51 @@ namespace winrt::vertical_tasks::implementation
     void MainWindow::AddGroup(winrt::Windows::Foundation::IInspectable const& sender,
         winrt::Microsoft::UI::Xaml::RoutedEventArgs const& /*e*/)
     {
+        int groups = m_tasksByGroup.size();
+        winrt::vertical_tasks::GroupId newGroupId = winrt::vertical_tasks::GroupId::GroupOne;
+
+        switch (groups)
+        {
+        case 1:
+        {
+            newGroupId = winrt::vertical_tasks::GroupId::GroupOne;
+            break;
+        }
+        case 2:
+        {
+            newGroupId = winrt::vertical_tasks::GroupId::GroupTwo;
+            break;
+        }
+        case 3:
+        {
+            newGroupId = winrt::vertical_tasks::GroupId::GroupThree;
+            break;
+        }
+        case 4:
+        {
+            newGroupId = winrt::vertical_tasks::GroupId::GroupFour;
+            break;
+        }
+        }
+
+        // Create new group and update tasks list and create list entry in tasks by group map
         auto newGroup = winrt::make<winrt::vertical_tasks::implementation::TaskVM>(nullptr,
-            DispatcherQueue(), winrt::vertical_tasks::GroupId::GroupOne, true, 0);
-        auto group = newGroup.as<winrt::vertical_tasks::TaskVM>();
+            DispatcherQueue(), newGroupId, true, 0);
+        newGroup.IsGroupedTask(false);
 
-        m_tasks->get_container().insert(m_tasks->get_container().begin(), group);
-        m_tasksByGroup.insert({ group, winrt::single_threaded_observable_vector<winrt::vertical_tasks::TaskVM>() });
+        m_tasks->get_container().insert(m_tasks->get_container().begin(), newGroup);
+        m_tasksByGroup.insert({ newGroup, winrt::single_threaded_observable_vector<winrt::vertical_tasks::TaskVM>() });
 
+        // Update menu item being added to group
+        // TODO - should check to see if this task was in another group & remove it from the map if so 
         auto menuItem = sender.as< Microsoft::UI::Xaml::Controls::MenuFlyoutItem>();
         auto dataContext = menuItem.DataContext().as<winrt::vertical_tasks::TaskVM>();
-        dataContext.Group(winrt::vertical_tasks::GroupId::GroupOne);
+        dataContext.Group(newGroupId);
         dataContext.GroupIndex(1);
         dataContext.IsGroupedTask(true);
+
+        // Update new group's tasks in map
+        m_tasksByGroup.at(newGroup).Append(dataContext);
 
         m_tasks->sort();
     }
@@ -345,59 +381,93 @@ namespace winrt::vertical_tasks::implementation
     void MainWindow::TaskClick(winrt::Windows::Foundation::IInspectable const& sender,
         winrt::Microsoft::UI::Xaml::RoutedEventArgs const& /*e*/)
     {
-        Microsoft::UI::Xaml::Data::ItemIndexRange deselectRange{ 0, m_tasks->m_taskCount };
+        Microsoft::UI::Xaml::Data::ItemIndexRange deselectRange{ 0, Tasks().Size() };
         myList().DeselectRange(deselectRange);
 
         Microsoft::UI::Xaml::Controls::Button wrappingButton = sender.as<Microsoft::UI::Xaml::Controls::Button>();
-        Microsoft::UI::Xaml::Controls::Grid grid = wrappingButton.Content().as<Microsoft::UI::Xaml::Controls::Grid>();
-        if (auto textBlock = grid.Children().GetAt(2).as<Microsoft::UI::Xaml::Controls::TextBlock>())
-        {
-            if (textBlock.Text() == L"Group One")
-            {
-                Microsoft::UI::Xaml::Data::ItemIndexRange indexRange{ 0, 4u };
-                myList().SelectRange(indexRange);
-            }
-            else if (textBlock.Text() == L"Group Two")
-            {
-                Microsoft::UI::Xaml::Data::ItemIndexRange indexRange{ 4, 3u };
-                myList().SelectRange(indexRange);
-            }
-            else if (textBlock.Text() == L"Group Three")
-            {
-                Microsoft::UI::Xaml::Data::ItemIndexRange indexRange{ 7, 2u };
-                myList().SelectRange(indexRange);
-            }
-			else
-			{
-				auto found = m_tasks->find(textBlock.Text());
-				if (found != m_tasks->end())
-				{
-					auto taskVM = found->as<vertical_tasks::implementation::TaskVM>();
-					WINDOWPLACEMENT wPos;
-					GetWindowPlacement(taskVM->Hwnd(), &wPos);
+        auto clickedTaskVM = wrappingButton.DataContext().as<vertical_tasks::implementation::TaskVM>();
 
-					if ((wPos.showCmd == SW_MINIMIZE) || (wPos.showCmd == SW_SHOWMINIMIZED))
-					{
-						SetForegroundWindow(taskVM->Hwnd());
-						if (!ShowWindow(taskVM->Hwnd(), SW_RESTORE))
-						{
-							// ShowWindow doesn't work if the process is running elevated: fallback to SendMessage
-							SendMessage(taskVM->Hwnd(), WM_SYSCOMMAND, SC_RESTORE, 0);
-						}
-					}
-					else
-					{
-						taskVM->Minimize();
-					}
-				}
-			}
+        if (clickedTaskVM->IsGroupId())
+        {
+            auto groupedTasks = m_tasksByGroup.at(*clickedTaskVM);
+            uint32_t groupedTasksSize = groupedTasks.Size() + 1;
+
+            uint32_t index;
+            if (Tasks().IndexOf(*clickedTaskVM, index))
+            {
+                Microsoft::UI::Xaml::Data::ItemIndexRange selectRange{ static_cast<int32_t>(index), groupedTasksSize };
+                myList().SelectRange(selectRange);
+            }
+        }
+        else
+        {
+            WINDOWPLACEMENT wPos;
+            GetWindowPlacement(clickedTaskVM->Hwnd(), &wPos);
+
+            if ((wPos.showCmd == SW_MINIMIZE) || (wPos.showCmd == SW_SHOWMINIMIZED))
+            {
+                SetForegroundWindow(clickedTaskVM->Hwnd());
+                if (!ShowWindow(clickedTaskVM->Hwnd(), SW_RESTORE))
+                {
+                    // ShowWindow doesn't work if the process is running elevated: fallback to SendMessage
+                    SendMessage(clickedTaskVM->Hwnd(), WM_SYSCOMMAND, SC_RESTORE, 0);
+                }
+            }
+            else
+            {
+                clickedTaskVM->Minimize();
+            }
         }
     }
 
-    winrt::fire_and_forget MainWindow::OnItemClick(Windows::Foundation::IInspectable const& /*sender*/, Microsoft::UI::Xaml::Controls::ItemClickEventArgs const& /*args*/)
+    void MainWindow::MoveToGroup(winrt::Windows::Foundation::IInspectable const& sender,
+        winrt::Microsoft::UI::Xaml::RoutedEventArgs const& e)
     {
+        if (auto menuFlyoutItem = sender.as<Microsoft::UI::Xaml::Controls::MenuFlyoutItem>())
+        {
+            auto dataContext = menuFlyoutItem.DataContext().as<winrt::vertical_tasks::TaskVM>();
 
-        co_return;
+            winrt::vertical_tasks::GroupId currentGroup = dataContext.Group();
+            winrt::vertical_tasks::GroupId newGroup = currentGroup;
+
+            if (menuFlyoutItem.Text() == L"Group One")
+            {
+                newGroup = winrt::vertical_tasks::GroupId::GroupOne;
+            }
+            else if (menuFlyoutItem.Text() == L"Group Two")
+            {
+                newGroup = winrt::vertical_tasks::GroupId::GroupTwo;
+            }
+            else if (menuFlyoutItem.Text() == L"Group Three")
+            {
+                newGroup = winrt::vertical_tasks::GroupId::GroupThree;
+            }
+            else if (menuFlyoutItem.Text() == L"Group Four")
+            {
+                newGroup = winrt::vertical_tasks::GroupId::GroupFour;
+            }
+
+            if (newGroup != currentGroup)
+            {
+                dataContext.IsGroupedTask(true);
+                dataContext.Group(newGroup);
+
+                for (auto groupTask : m_tasksByGroup)
+                {
+                    uint32_t groupIndex;
+                    if (groupTask.second.IndexOf(dataContext, groupIndex))
+                    {
+                        groupTask.second.RemoveAt(groupIndex);
+                    }
+                    if (groupTask.first.Group() == newGroup)
+                    {
+                        groupTask.second.Append(dataContext);
+                    }
+                }
+
+                m_tasks->sort();
+            }
+        }
     }
 
     winrt::fire_and_forget MainWindow::OnSelectionChanged(Windows::Foundation::IInspectable const& /*sender*/, Microsoft::UI::Xaml::Controls::SelectionChangedEventArgs const& /*args*/)
