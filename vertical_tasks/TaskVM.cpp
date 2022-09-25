@@ -1,7 +1,5 @@
-#include "pch.h"
 #include "TaskVM.h"
 #include "TaskVM.g.cpp"
-
 
 namespace winrt::vertical_tasks::implementation
 {

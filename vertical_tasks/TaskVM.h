@@ -4,39 +4,43 @@
 #include "TaskVM.g.h"
 #include <wil\resource.h>
 
-
 namespace winrt::vertical_tasks::implementation
 {
     struct TaskVM : TaskVMT<TaskVM>
     {
-        TaskVM(HWND hwnd, 
-               winrt::Microsoft::UI::Dispatching::DispatcherQueue uiThread,
-               const winrt::vertical_tasks::GroupId groupId, 
-               const bool isGroup):
+        //static Windows::UI::Xaml::DependencyProperty IsGroupedTaskProperty() { return s_isGroupedTaskProperty; }
+
+        TaskVM(HWND hwnd,
+            winrt::Microsoft::UI::Dispatching::DispatcherQueue uiThread,
+            const winrt::vertical_tasks::GroupId groupId,
+            const bool isGroup,
+            const u_int groupIndex) :
             m_hwnd(reinterpret_cast<HWND>(hwnd)),
             m_uiThread(uiThread),
             m_isGroupHeader(isGroup),
-            m_groupId(groupId)
+            m_isGroupedTask(!isGroup && groupId != winrt::vertical_tasks::GroupId::Ungrouped),
+            m_groupId(groupId),
+            m_groupIndex(groupIndex)
         {
             if (m_isGroupHeader)
             {
                 switch (groupId)
                 {
-                    case winrt::vertical_tasks::GroupId::GroupOne:
-                    {
-                        m_title = L"Group One";
-                        break;
-                    }
-                    case winrt::vertical_tasks::GroupId::GroupTwo:
-                    {
-                        m_title = L"Group Two";
-                        break;
-                    }
-                    case winrt::vertical_tasks::GroupId::GroupThree:
-                    {
-                        m_title = L"Group Three";
-                        break;
-                    }
+                case winrt::vertical_tasks::GroupId::GroupOne:
+                {
+                    m_title = L"Group One";
+                    break;
+                }
+                case winrt::vertical_tasks::GroupId::GroupTwo:
+                {
+                    m_title = L"Group Two";
+                    break;
+                }
+                case winrt::vertical_tasks::GroupId::GroupThree:
+                {
+                    m_title = L"Group Three";
+                    break;
+                }
                 }
 
             }
@@ -78,11 +82,16 @@ namespace winrt::vertical_tasks::implementation
             return !m_isGroupHeader;
         }
 
-        bool IsGroupedTask()
+        void IsGroupedTask(bool value)
         {
-            return !m_isGroupHeader && m_groupId != winrt::vertical_tasks::GroupId::Ungrouped;
+            m_isGroupedTask = value;
+            OnPropertyChanged(L"IsGroupedTask");
         }
 
+        bool IsGroupedTask() const
+        {
+            return m_isGroupedTask;
+        }
 
         hstring Title() const
         {
@@ -135,9 +144,20 @@ namespace winrt::vertical_tasks::implementation
             return m_procName;
         }
 
+        u_int GroupIndex() const
+        {
+            return m_groupIndex;
+        }
+
+        void GroupIndex(u_int index)
+        {
+            m_groupIndex = index;
+        }
+
     private:
 
         bool m_isGroupHeader;
+        bool m_isGroupedTask;
         winrt::vertical_tasks::GroupId m_groupId;
 
         HWND m_hwnd;
@@ -146,6 +166,9 @@ namespace winrt::vertical_tasks::implementation
 
         winrt::hstring m_title;
         wil::unique_hicon m_icon;
+
+        u_int m_groupIndex;
+        static winrt::Windows::UI::Xaml::DependencyProperty s_isGroupedTaskProperty;
 
         winrt::Microsoft::UI::Xaml::Media::Imaging::SoftwareBitmapSource m_iconSource{nullptr};
         winrt::event<Microsoft::UI::Xaml::Data::PropertyChangedEventHandler> m_propertyChanged;
