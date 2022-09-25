@@ -354,6 +354,12 @@ namespace winrt::vertical_tasks::implementation
             newGroupId = winrt::vertical_tasks::GroupId::GroupFour;
             break;
         }
+        default:
+        {
+            // TODO - maybe temporarily warn user we only support a max of 4 groups
+            // Better to rework this to support unlimited number of groups of course
+            return;
+        }
         }
 
         // Create new group and update tasks list and create list entry in tasks by group map
@@ -365,12 +371,51 @@ namespace winrt::vertical_tasks::implementation
         m_tasksByGroup.insert({ newGroup, winrt::single_threaded_observable_vector<winrt::vertical_tasks::TaskVM>() });
 
         // Update menu item being added to group
-        // TODO - should check to see if this task was in another group & remove it from the map if so 
         auto menuItem = sender.as< Microsoft::UI::Xaml::Controls::MenuFlyoutItem>();
         auto dataContext = menuItem.DataContext().as<winrt::vertical_tasks::TaskVM>();
         dataContext.Group(newGroupId);
         dataContext.GroupIndex(1);
         dataContext.IsGroupedTask(true);
+
+        // Remove from previous task group header
+        for (auto groupTask : m_tasksByGroup)
+        {
+            uint32_t groupIndex;
+            if (groupTask.second.IndexOf(dataContext, groupIndex))
+            {
+                groupTask.second.RemoveAt(groupIndex);
+            }
+
+            if (newGroupId == winrt::vertical_tasks::GroupId::GroupOne)
+            {
+                for (auto task : m_tasksByGroup.at(groupTask.first))
+                {
+                    task.GroupsAvailable(true);
+                    task.IsGroupOneAvailable(true);
+                }
+            }
+            else if (newGroupId == winrt::vertical_tasks::GroupId::GroupTwo)
+            {
+                for (auto task : m_tasksByGroup.at(groupTask.first))
+                {
+                    task.IsGroupTwoAvailable(true);
+                }
+            }
+            else if (newGroupId == winrt::vertical_tasks::GroupId::GroupThree)
+            {
+                for (auto task : m_tasksByGroup.at(groupTask.first))
+                {
+                    task.IsGroupThreeAvailable(true);
+                }
+            }
+            else if (newGroupId == winrt::vertical_tasks::GroupId::GroupFour)
+            {
+                for (auto task : m_tasksByGroup.at(groupTask.first))
+                {
+                    task.IsGroupFourAvailable(true);
+                }
+            }
+        }
 
         // Update new group's tasks in map
         m_tasksByGroup.at(newGroup).Append(dataContext);
@@ -389,6 +434,7 @@ namespace winrt::vertical_tasks::implementation
 
         if (clickedTaskVM->IsGroupId())
         {
+            m_justClickedGroupTask = true;
             auto groupedTasks = m_tasksByGroup.at(*clickedTaskVM);
             uint32_t groupedTasksSize = groupedTasks.Size() + 1;
 
@@ -538,9 +584,10 @@ namespace winrt::vertical_tasks::implementation
 
     void MainWindow::SelectItem(HWND hwnd)
     {
-        if (selectionFromClick)
+        if (selectionFromClick || m_justClickedGroupTask)
         {
             // we caused the selection, so ignore it. 
+            m_justClickedGroupTask = false;
             return;
         }
         auto scope = selectionFromShell.onInScope();

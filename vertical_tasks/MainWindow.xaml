@@ -21,11 +21,12 @@
                   CanReorderItems="True"
                   AllowDrop="True"
                   Width="250"
+                  Padding="0"
                   >
             <ListView.ItemTemplate>
                 <DataTemplate x:DataType="local:TaskVM">
                     <Button Background="Transparent" BorderThickness="0" Click="TaskClick"
-                            Margin="0" Padding="0" Width="200"
+                            Margin="0" Padding="0" Width="250" MinHeight="40"
                             HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
                         <Button.Resources>
                             <ResourceDictionary>
@@ -53,7 +54,7 @@
                                 </ResourceDictionary.ThemeDictionaries>
                             </ResourceDictionary>
                         </Button.Resources>
-                        <Grid Margin="0,0,0,0" Padding="0,0,0,0" MinWidth="200">
+                        <Grid Margin="0,0,0,0" Padding="0,0,0,0" MinWidth="200" VerticalAlignment="Stretch">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="20"/>
                         </Grid.RowDefinitions>
@@ -88,13 +89,14 @@
                                TextTrimming="CharacterEllipsis"
                                FontSize="12"
                                Margin="6,0,0,0"
+                               MinWidth="150"
                                MaxWidth="150"/>
                             <Button Grid.Column="3"
                                 Height="15"
                                 Width="15"
                                 Margin="5,0,0,0"
                                 Padding="0,0,0,0"
-                                Visibility="{x:Bind IsTask}"
+                                Visibility="{x:Bind IsTask, Mode=OneWay}"
                             >
                              <Button.Resources>
                                         <ResourceDictionary>
@@ -137,20 +139,19 @@
                                             <FontIcon Glyph="&#xe738;"/>
                                         </MenuFlyoutItem.Icon>
                                     </MenuFlyoutItem>
-                                     <MenuFlyoutItem Visibility="{x:Bind IsTask, Mode=OneWay}" 
-                                                     Text="Add to new group" Click="AddGroup">
+                                     <MenuFlyoutItem Text="Add to new group" Click="AddGroup">
                                          <MenuFlyoutItem.Icon>
                                             <FontIcon Glyph="&#xecc8;"/>
                                          </MenuFlyoutItem.Icon>
-                                     </MenuFlyoutItem>
-                                            <MenuFlyoutSubItem Text="Move to group" Visibility="{x:Bind IsTask, Mode=OneWay}" >
+                                     </MenuFlyoutItem >
+                                            <MenuFlyoutSubItem Text="Move to group" Visibility="{x:Bind GroupsAvailable, Mode=OneWay}" >
                                          <MenuFlyoutSubItem.Icon>
                                              <FontIcon Glyph="&#xe8de;"/>
                                          </MenuFlyoutSubItem.Icon>
-                                          <MenuFlyoutItem Text="Group One" Click="MoveToGroup" />
-                                          <MenuFlyoutItem Text="Group Two" Click="MoveToGroup"/>
-                                          <MenuFlyoutItem Text="Group Three" Click="MoveToGroup"/>
-                                          <MenuFlyoutItem Text="Group Four" Click="MoveToGroup"/>
+                                                <MenuFlyoutItem Text="Group One" Click="MoveToGroup" Visibility="{x:Bind IsGroupOneAvailable, Mode=OneWay}"/>
+                                                <MenuFlyoutItem Text="Group Two" Click="MoveToGroup" Visibility="{x:Bind IsGroupTwoAvailable, Mode=OneWay}"/>
+                                                <MenuFlyoutItem Text="Group Three" Click="MoveToGroup" Visibility="{x:Bind IsGroupThreeAvailable, Mode=OneWay}"/>
+                                                <MenuFlyoutItem Text="Group Four" Click="MoveToGroup"  Visibility="{x:Bind IsGroupFourAvailable, Mode=OneWay}"/>
                                       </MenuFlyoutSubItem>
                                     
                                         </MenuFlyout>

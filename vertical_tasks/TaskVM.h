@@ -41,8 +41,13 @@ namespace winrt::vertical_tasks::implementation
                     m_title = L"Group Three";
                     break;
                 }
+                case winrt::vertical_tasks::GroupId::GroupFour:
+                {
+                    m_title = L"Group Four";
+                    break;
                 }
-
+                }
+                OnPropertyChanged(L"IsGroupId");
             }
             else
             {
@@ -72,7 +77,7 @@ namespace winrt::vertical_tasks::implementation
             m_groupId = id;
         }
 
-        bool IsGroupId()
+        bool IsGroupId() const
         {
             return m_isGroupHeader;
         }
@@ -93,16 +98,65 @@ namespace winrt::vertical_tasks::implementation
             return m_isGroupedTask;
         }
 
+        void GroupsAvailable(bool value)
+        {
+            m_groupsAvailable = value;
+            OnPropertyChanged(L"GroupsAvailable");
+        }
+
+        bool GroupsAvailable() const
+        {
+            return m_groupsAvailable;
+        }
+
+        void IsGroupOneAvailable(bool value)
+        {
+            m_isGroupOneAvailable = value;
+            OnPropertyChanged(L"IsGroupOneAvailable");
+        }
+
+        bool IsGroupOneAvailable() const
+        {
+            return m_isGroupOneAvailable;
+        }
+
+        void IsGroupTwoAvailable(bool value)
+        {
+            m_isGroupTwoAvailable = value;
+            OnPropertyChanged(L"IsGroupTwoAvailable");
+        }
+
+        bool IsGroupTwoAvailable() const
+        {
+            return m_isGroupTwoAvailable;
+        }
+
+        void IsGroupThreeAvailable(bool value)
+        {
+            m_isGroupThreeAvailable = value;
+            OnPropertyChanged(L"IsGroupThreeAvailable");
+        }
+
+        bool IsGroupThreeAvailable() const
+        {
+            return m_isGroupThreeAvailable;
+        }
+
+        void IsGroupFourAvailable(bool value)
+        {
+            m_isGroupFourAvailable = value;
+            OnPropertyChanged(L"IsGroupFourAvailable");
+        }
+
+        bool IsGroupFourAvailable() const
+        {
+            return m_isGroupFourAvailable;
+        }
+
         hstring Title() const
         {
             return m_title;
         };
-
-        hstring Spacing()
-        {
-            return L"       ";
-        }
-        
 
         Microsoft::UI::Xaml::Media::Imaging::SoftwareBitmapSource IconSource()
         {
@@ -158,6 +212,13 @@ namespace winrt::vertical_tasks::implementation
 
         bool m_isGroupHeader;
         bool m_isGroupedTask;
+        bool m_groupsAvailable = false;
+
+        bool m_isGroupOneAvailable = false;
+        bool m_isGroupTwoAvailable = false;
+        bool m_isGroupThreeAvailable = false;
+        bool m_isGroupFourAvailable = false;
+
         winrt::vertical_tasks::GroupId m_groupId;
 
         HWND m_hwnd;

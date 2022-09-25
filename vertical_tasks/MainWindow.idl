@@ -13,7 +13,6 @@ namespace vertical_tasks
     runtimeclass TaskVM : Microsoft.UI.Xaml.Data.INotifyPropertyChanged
     {
         String Title{ get; };
-        String Spacing{ get; };
 
         Microsoft.UI.Xaml.Media.Imaging.SoftwareBitmapSource IconSource{ get; set; };
 
@@ -23,6 +22,12 @@ namespace vertical_tasks
         Boolean IsTask{ get; };
 
         Boolean IsGroupedTask{ get; set; };
+        Boolean GroupsAvailable{ get; set; };
+
+        Boolean IsGroupOneAvailable{ get; set; };
+        Boolean IsGroupTwoAvailable{ get; set; };
+        Boolean IsGroupThreeAvailable{ get; set; };
+        Boolean IsGroupFourAvailable{ get; set; };
 
         UInt32 GroupIndex{ get; set;  };
 

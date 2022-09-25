@@ -165,6 +165,9 @@ namespace winrt::vertical_tasks::implementation
         scope_toggle selectionFromShell;
         scope_toggle selectionFromClick;
 
+        bool m_justClickedGroupTask = false;
+        bool m_groupsAvailable = false;
+
         winrt::MUCSB::SystemBackdropConfiguration m_configuration{ nullptr };
         winrt::MUCSB::MicaController m_backdropController{ nullptr };
         winrt::MUX::Window::Activated_revoker m_activatedRevoker;
