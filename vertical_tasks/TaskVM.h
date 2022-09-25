@@ -168,7 +168,6 @@ namespace winrt::vertical_tasks::implementation
         wil::unique_hicon m_icon;
 
         u_int m_groupIndex;
-        static winrt::Windows::UI::Xaml::DependencyProperty s_isGroupedTaskProperty;
 
         winrt::Microsoft::UI::Xaml::Media::Imaging::SoftwareBitmapSource m_iconSource{nullptr};
         winrt::event<Microsoft::UI::Xaml::Data::PropertyChangedEventHandler> m_propertyChanged;
