@@ -25,8 +25,9 @@
                   >
             <ListView.ItemTemplate>
                 <DataTemplate x:DataType="local:TaskVM">
-                    <Button Background="Transparent" BorderThickness="0" Click="TaskClick"
-                            Margin="0" Padding="0" Width="250" MinHeight="40"
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                        <Button Background="Transparent" BorderThickness="0" Click="TaskClick"
+                            Margin="0" Padding="0" Width="200" MinHeight="40"
                             HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
                         <Button.Resources>
                             <ResourceDictionary>
@@ -54,49 +55,48 @@
                                 </ResourceDictionary.ThemeDictionaries>
                             </ResourceDictionary>
                         </Button.Resources>
-                        <Grid Margin="0,0,0,0" Padding="0,0,0,0" MinWidth="200" VerticalAlignment="Stretch">
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="20"/>
-                        </Grid.RowDefinitions>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Text="       "
-                               Visibility="{x:Bind IsGroupedTask, Mode=OneWay}"
-                               FontFamily="Segoe UI Variable Static Small"
-                               FontSize="14"
-                               HorizontalAlignment="Left"
-                               />
-                            <Image Name="AppIcon" 
-                               Grid.RowSpan="2"
-                               Width ="16"
-                               Height="16"
-                               Margin="2,0,2,0"
-                               VerticalAlignment="Center"
-                               HorizontalAlignment="Center"
-                               Grid.Column="1"
-                               Source ="{x:Bind IconSource, Mode=OneWay}"
-                               Visibility="{x:Bind IsTask, Mode=OneWay}"
+                                <Grid Margin="0,0,0,0" Padding="0,0,0,0" MinWidth="150" VerticalAlignment="Stretch">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="20"/>
+                                    </Grid.RowDefinitions>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="       "
+                                        Visibility="{x:Bind IsGroupedTask, Mode=OneWay}"
+                                        FontFamily="Segoe UI Variable Static Small"
+                                        FontSize="14"
+                                        HorizontalAlignment="Left"
+                                    />
+                                   <Image Name="AppIcon" 
+                                        Width ="16"
+                                        Height="16"
+                                        Margin="2,0,2,0"
+                                        VerticalAlignment="Center"
+                                        HorizontalAlignment="Center"
+                                        Grid.Column="1"
+                                        Source ="{x:Bind IconSource, Mode=OneWay}"
+                                        Visibility="{x:Bind IsTask, Mode=OneWay}"
                                    />
-                           <TextBlock Grid.Column="2"
-                               Text="{x:Bind Title, Mode=OneWay}"
-                               Style="{ThemeResource BaseTextBlockStyle}"
-                               HorizontalAlignment="Left"
-                               TextTrimming="CharacterEllipsis"
-                               FontSize="12"
-                               Margin="6,0,0,0"
-                               MinWidth="150"
-                               MaxWidth="150"/>
-                            <Button Grid.Column="3"
+                                   <TextBlock Grid.Column="2"
+                                        Text="{x:Bind Title, Mode=OneWay}"
+                                        Style="{ThemeResource BaseTextBlockStyle}"
+                                        HorizontalAlignment="Left"
+                                        TextTrimming="CharacterEllipsis"
+                                        FontSize="12"
+                                        Margin="6,0,0,0"
+                                        MinWidth="150"
+                                        MaxWidth="150"/>
+                                </Grid>
+                            </Button>
+                            <Button
                                 Height="15"
                                 Width="15"
                                 Margin="5,0,0,0"
                                 Padding="0,0,0,0"
-                                Visibility="{x:Bind IsTask, Mode=OneWay}"
+                                Visibility="Visible"
                             >
                              <Button.Resources>
                                         <ResourceDictionary>
@@ -158,8 +158,8 @@
 
                             </Button.Flyout>
                         </Button>
-                    </Grid>
-                    </Button>
+
+                    </StackPanel>
                 </DataTemplate>
             </ListView.ItemTemplate>
         </ListView>
