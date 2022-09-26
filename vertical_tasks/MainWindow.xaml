@@ -69,6 +69,7 @@
                                         FontFamily="Segoe UI Variable Static Small"
                                         FontSize="14"
                                         HorizontalAlignment="Left"
+                                           MinWidth="40"
                                     />
                                 <Image Name="AppIcon" 
                                         Width ="16"
