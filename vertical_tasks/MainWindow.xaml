@@ -9,47 +9,124 @@
     mc:Ignorable="d"
     >
 
-    <StackPanel Orientation="Vertical" HorizontalAlignment="Left" VerticalAlignment="Bottom">
-        <Button x:Name="myButton" Click="myButton_Click">Click Me</Button>
+    <StackPanel Orientation="Vertical" HorizontalAlignment="Left" VerticalAlignment="Center">
+        <Button x:Name="myButton" Click="myButton_Click">Click Me</Button> 
         <ListView x:Name="myList" 
                   SelectionMode="Extended"
                   ItemsSource="{x:Bind Tasks}" 
-                  Width="300"
-                  ItemClick="OnItemClick"
-                  SelectionChanged="OnSelectionChanged">
+                  SelectionChanged="OnSelectionChanged"
+                  HorizontalAlignment="Stretch"
+                  CanDragItems="True"
+                  CanReorderItems="True"
+                  AllowDrop="True"
+                  Width="250"
+                  Height="750"
+                  Padding="0"
+                  >
             <ListView.ItemTemplate>
                 <DataTemplate x:DataType="local:TaskVM">
-                    <Grid Margin="0,0,0,0" Padding="0,0,0,0">
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="20"/>
-                        </Grid.RowDefinitions>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        <Image Name="AppIcon" 
-                            Grid.RowSpan="2"
-                            Width ="16"
-                            Height="16"
-                            Margin="2,0,2,0"
-                            VerticalAlignment="Center"
-                            HorizontalAlignment="Center"
-                            Source ="{x:Bind IconSource}"/>
-                        <TextBlock Grid.Column="1"
-                            Text="{x:Bind Title, Mode=OneWay}"
-                            Style="{ThemeResource BaseTextBlockStyle}"
-                                   TextTrimming="CharacterEllipsis"
-                                   FontSize="12"
-                            Margin="6,0,0,0"/>
-                        <Button Grid.Column="2"
-                                Width="20"
-                                Margin="0,0,0,0"
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                        <Button Background="Transparent" BorderThickness="0" Click="TaskClick"
+                            Margin="0" Padding="0" Width="200" MinHeight="40"
+                            HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+                            <Button.Resources>
+                                <ResourceDictionary>
+                                    <ResourceDictionary.ThemeDictionaries>
+                                        <ResourceDictionary x:Key="Light">
+                                            <SolidColorBrush x:Key="ButtonBackground"
+                                                                        Color="Transparent"/>
+                                            <SolidColorBrush x:Key="ButtonBackgroundPointerOver"
+                                                                        Color="Transparent"/>
+                                            <SolidColorBrush x:Key="ButtonBackgroundPressed"
+                                                                        Color="Transparent"/>
+                                            <SolidColorBrush x:Key="ButtonBackgroundDisabled"
+                                                                        Color="Transparent"/>
+                                        </ResourceDictionary>
+                                        <ResourceDictionary x:Key="Dark">
+                                            <SolidColorBrush x:Key="ButtonBackground"
+                                                                        Color="Transparent"/>
+                                            <SolidColorBrush x:Key="ButtonBackgroundPointerOver"
+                                                                        Color="Transparent"/>
+                                            <SolidColorBrush x:Key="ButtonBackgroundPressed"
+                                                                        Color="Transparent"/>
+                                            <SolidColorBrush x:Key="ButtonBackgroundDisabled"
+                                                                        Color="Transparent"/>
+                                        </ResourceDictionary>
+                                    </ResourceDictionary.ThemeDictionaries>
+                                </ResourceDictionary>
+                            </Button.Resources>
+                            <Grid Margin="0,0,0,0" Padding="0,0,0,0" MinWidth="150" VerticalAlignment="Stretch">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="20"/>
+                                </Grid.RowDefinitions>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="       "
+                                        Visibility="{x:Bind IsGroupedTask, Mode=OneWay}"
+                                        FontFamily="Segoe UI Variable Static Small"
+                                        FontSize="14"
+                                        HorizontalAlignment="Left"
+                                           MinWidth="40"
+                                    />
+                                <Image Name="AppIcon" 
+                                        Width ="16"
+                                        Height="16"
+                                        Margin="2,0,2,0"
+                                        VerticalAlignment="Center"
+                                        HorizontalAlignment="Center"
+                                        Grid.Column="1"
+                                        Source ="{x:Bind IconSource, Mode=OneWay}"
+                                        Visibility="{x:Bind IsTask, Mode=OneWay}"
+                                   />
+                                <TextBlock Grid.Column="2"
+                                        Text="{x:Bind Title, Mode=OneWay}"
+                                        Style="{ThemeResource BaseTextBlockStyle}"
+                                        HorizontalAlignment="Left"
+                                        TextTrimming="CharacterEllipsis"
+                                        FontSize="12"
+                                        Margin="6,0,0,0"
+                                        MinWidth="150"
+                                        MaxWidth="150"/>
+                            </Grid>
+                        </Button>
+                        <Button
+                                Height="15"
+                                Width="15"
+                                Margin="5,0,0,0"
                                 Padding="0,0,0,0"
-                                 
+                                Visibility="Visible"
                             >
+                            <Button.Resources>
+                                <ResourceDictionary>
+                                    <ResourceDictionary.ThemeDictionaries>
+                                        <ResourceDictionary x:Key="Light">
+                                            <SolidColorBrush x:Key="ButtonBackground"
+                                                                        Color="Transparent"/>
+                                            <SolidColorBrush x:Key="ButtonBackgroundPointerOver"
+                                                                        Color="Blue"/>
+                                            <SolidColorBrush x:Key="ButtonBackgroundPressed"
+                                                                        Color="DarkBlue"/>
+                                            <SolidColorBrush x:Key="ButtonBackgroundDisabled"
+                                                                        Color="Transparent"/>
+                                        </ResourceDictionary>
+                                        <ResourceDictionary x:Key="Dark">
+                                            <SolidColorBrush x:Key="ButtonBackground"
+                                                                        Color="Transparent"/>
+                                            <SolidColorBrush x:Key="ButtonBackgroundPointerOver"
+                                                                        Color="Blue"/>
+                                            <SolidColorBrush x:Key="ButtonBackgroundPressed"
+                                                                        Color="DarkBlue"/>
+                                            <SolidColorBrush x:Key="ButtonBackgroundDisabled"
+                                                                        Color="Transparent"/>
+                                        </ResourceDictionary>
+                                    </ResourceDictionary.ThemeDictionaries>
+                                </ResourceDictionary>
+                            </Button.Resources>
                             <Button.Content>
-                                <FontIcon Glyph="&#xE00F;"/>
+                                <FontIcon Glyph="&#xE00F;" FontSize="12"/>
                             </Button.Content>
                             <Button.Flyout>
                                 <MenuFlyout>
@@ -63,10 +140,27 @@
                                             <FontIcon Glyph="&#xe738;"/>
                                         </MenuFlyoutItem.Icon>
                                     </MenuFlyoutItem>
+                                    <MenuFlyoutItem Text="Add to new group" Click="AddGroup">
+                                        <MenuFlyoutItem.Icon>
+                                            <FontIcon Glyph="&#xecc8;"/>
+                                        </MenuFlyoutItem.Icon>
+                                    </MenuFlyoutItem >
+                                    <MenuFlyoutSubItem Text="Move to group" Visibility="{x:Bind GroupsAvailable, Mode=OneWay}" >
+                                        <MenuFlyoutSubItem.Icon>
+                                            <FontIcon Glyph="&#xe8de;"/>
+                                        </MenuFlyoutSubItem.Icon>
+                                        <MenuFlyoutItem Text="Group One" Click="MoveToGroup" Visibility="{x:Bind IsGroupOneAvailable, Mode=OneWay}"/>
+                                        <MenuFlyoutItem Text="Group Two" Click="MoveToGroup" Visibility="{x:Bind IsGroupTwoAvailable, Mode=OneWay}"/>
+                                        <MenuFlyoutItem Text="Group Three" Click="MoveToGroup" Visibility="{x:Bind IsGroupThreeAvailable, Mode=OneWay}"/>
+                                        <MenuFlyoutItem Text="Group Four" Click="MoveToGroup"  Visibility="{x:Bind IsGroupFourAvailable, Mode=OneWay}"/>
+                                    </MenuFlyoutSubItem>
+
                                 </MenuFlyout>
+
                             </Button.Flyout>
                         </Button>
-                    </Grid>
+
+                    </StackPanel>
                 </DataTemplate>
             </ListView.ItemTemplate>
         </ListView>

@@ -1,15 +1,39 @@
 namespace vertical_tasks
 {
+    enum GroupId
+    {
+        GroupOne,
+        GroupTwo,
+        GroupThree,
+        GroupFour,
+        Ungrouped
+    };
+
     [default_interface]
     runtimeclass TaskVM : Microsoft.UI.Xaml.Data.INotifyPropertyChanged
     {
         String Title{ get; };
+
         Microsoft.UI.Xaml.Media.Imaging.SoftwareBitmapSource IconSource{ get; set; };
+
+        GroupId Group{ get; set; };
+
+        Boolean IsGroupId{ get; };
+        Boolean IsTask{ get; };
+
+        Boolean IsGroupedTask{ get; set; };
+        Boolean GroupsAvailable{ get; set; };
+
+        Boolean IsGroupOneAvailable{ get; set; };
+        Boolean IsGroupTwoAvailable{ get; set; };
+        Boolean IsGroupThreeAvailable{ get; set; };
+        Boolean IsGroupFourAvailable{ get; set; };
+
+        UInt32 GroupIndex{ get; set;  };
 
         void Select();
         void Close();
         void Minimize();
-
     }
 
     [default_interface]
