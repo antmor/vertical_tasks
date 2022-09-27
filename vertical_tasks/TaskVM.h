@@ -42,8 +42,10 @@ namespace winrt::vertical_tasks::implementation
             m_iconSource = value;
             OnPropertyChanged(L"IconSource");
         }
+
         void Select();
         void Close();
+        void Kill();
         void Minimize();
 
         winrt::fire_and_forget RefreshTitle(bool update = true);

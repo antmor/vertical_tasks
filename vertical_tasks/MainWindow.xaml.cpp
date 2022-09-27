@@ -130,6 +130,12 @@ namespace winrt::vertical_tasks::implementation
         sideBarRect.right = sideBarRect.left + m_left;
         SizeWindowToRect(m_hwnd, sideBarRect);
 
+        SetWindowPos(
+            m_hwnd,
+            HWND_TOPMOST,
+            sideBarRect.left, sideBarRect.top, sideBarRect.right, sideBarRect.bottom,
+            SWP_SHOWWINDOW);
+
         if (winrt::MUCSB::MicaController::IsSupported())
         {
             // We ensure that there is a Windows.System.DispatcherQueue on the current thread.

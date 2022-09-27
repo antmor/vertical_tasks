@@ -35,7 +35,7 @@
                             Margin="2,0,2,0"
                             VerticalAlignment="Center"
                             HorizontalAlignment="Center"
-                            Source ="{x:Bind IconSource}"/>
+                            Source ="{x:Bind IconSource, Mode=OneWay}"/>
                         <TextBlock Grid.Column="1"
                             Text="{x:Bind Title, Mode=OneWay}"
                             Style="{ThemeResource BaseTextBlockStyle}"
@@ -52,15 +52,20 @@
                                 <FontIcon Glyph="&#xE00F;"/>
                             </Button.Content>
                             <Button.Flyout>
-                                <MenuFlyout>
-                                    <MenuFlyoutItem Text="Close window" Click="{x:Bind Close}">
-                                        <MenuFlyoutItem.Icon>
-                                            <FontIcon Glyph="&#xe711;"/>
-                                        </MenuFlyoutItem.Icon>
-                                    </MenuFlyoutItem>
+                                <MenuFlyout Placement="Right">
                                     <MenuFlyoutItem Text="Minimize window" Click="{x:Bind Minimize}">
                                         <MenuFlyoutItem.Icon>
                                             <FontIcon Glyph="&#xe738;"/>
+                                        </MenuFlyoutItem.Icon>
+                                    </MenuFlyoutItem>
+                                    <MenuFlyoutItem Text="Kill Process" Click="{x:Bind Kill}">
+                                        <MenuFlyoutItem.Icon>
+                                            <FontIcon Glyph="&#xE107;"/>
+                                        </MenuFlyoutItem.Icon>
+                                    </MenuFlyoutItem>
+                                    <MenuFlyoutItem Text="Close window" Click="{x:Bind Close}">
+                                        <MenuFlyoutItem.Icon>
+                                            <FontIcon Glyph="&#xe711;"/>
                                         </MenuFlyoutItem.Icon>
                                     </MenuFlyoutItem>
                                 </MenuFlyout>
