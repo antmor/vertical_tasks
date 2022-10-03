@@ -272,3 +272,28 @@ inline HRESULT GetStreamOfWICBitmapSource(_In_opt_ IWICImagingFactory* pWICImagi
 {
     return GetStreamOfWICBitmapSourceWithOptions(pWICImagingFactory, pWICBitmapSource, guidContainerFormat, GUID_WICPixelFormat32bppBGRA, EncodingOptions::None, ppStreamOut);
 }
+
+//Windows::Foundation::
+winrt::Windows::Foundation::IAsyncOperation<winrt::Windows::Graphics::Imaging::SoftwareBitmap> GetBitmapFromIconFileAsync(wil::unique_hicon hicon)
+{
+    // TODO global decoder
+    wil::com_ptr<IWICImagingFactory> wicImagingFactory;
+    THROW_IF_FAILED(CoCreateInstance(CLSID_WICImagingFactory, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&wicImagingFactory)));
+
+    wil::com_ptr<IWICBitmap> wicBitmap;
+    THROW_IF_FAILED(wicImagingFactory->CreateBitmapFromHICON(hicon.get(), &wicBitmap));
+
+    wil::com_ptr<IWICBitmapSource> wicBitmapSource;
+    wicBitmap.query_to(&wicBitmapSource);
+    THROW_HR_IF_NULL(E_UNEXPECTED, wicBitmapSource);
+
+    wil::com_ptr<IStream> stream;
+    THROW_IF_FAILED(GetStreamOfWICBitmapSource(wicImagingFactory.get(), wicBitmapSource.get(), GUID_ContainerFormatPng, &stream));
+
+    winrt::Windows::Storage::Streams::IRandomAccessStream randomAccessStream{ nullptr };
+    THROW_IF_FAILED(CreateRandomAccessStreamOverStream(stream.get(), BSOS_DEFAULT, 
+        winrt::guid_of<winrt::Windows::Storage::Streams::IRandomAccessStream>(), winrt::put_abi(randomAccessStream)));
+
+    auto decoder = co_await winrt::Windows::Graphics::Imaging::BitmapDecoder::CreateAsync(randomAccessStream);
+    co_return co_await decoder.GetSoftwareBitmapAsync();
+}
