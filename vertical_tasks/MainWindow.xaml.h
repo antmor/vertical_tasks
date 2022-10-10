@@ -137,8 +137,7 @@ namespace winrt::vertical_tasks::implementation
         winrt::fire_and_forget FetchIcon(HWND hwnd);
 
         winrt::com_ptr<MyTasks> m_tasks{ winrt::make_self<MyTasks>() };
-        winrt::vertical_tasks::TaskVM m_ungroupedTaskHeader = (winrt::make<winrt::vertical_tasks::implementation::TaskVM>(nullptr,
-            DispatcherQueue(), winrt::vertical_tasks::GroupId::Ungrouped, true, 0)).as<winrt::vertical_tasks::TaskVM>();
+        winrt::vertical_tasks::TaskVM m_ungroupedTaskHeader {nullptr};
         std::map<winrt::vertical_tasks::TaskVM, winrt::Windows::Foundation::Collections::IObservableVector<winrt::vertical_tasks::TaskVM>> m_tasksByGroup;
 
         struct scope_toggle
@@ -161,6 +160,7 @@ namespace winrt::vertical_tasks::implementation
         HWND m_hwnd;
         HMONITOR m_mon;
         long m_left;
+        SIZE m_iconSize;
         std::unique_ptr<ShellHookMessages> m_shellHook;
         scope_toggle selectionFromShell;
         scope_toggle selectionFromClick;

@@ -106,7 +106,7 @@ namespace winrt::vertical_tasks::implementation
         EnableMenuItem(GetSystemMenu(m_hwnd, FALSE), SC_CLOSE,
             MF_BYCOMMAND | MF_DISABLED | MF_GRAYED);
 
-        // position on the left of the monitor
+        // position on the left of the monitor, TODO customize
         m_mon = MonitorFromWindow(m_hwnd, MONITOR_DEFAULTTONULL);
         MONITORINFOEXW monitorInfo{ sizeof(MONITORINFOEXW) };
         THROW_IF_WIN32_BOOL_FALSE(GetMonitorInfoW(m_mon, &monitorInfo));
@@ -121,6 +121,9 @@ namespace winrt::vertical_tasks::implementation
             sideBarRect.left, sideBarRect.top, sideBarRect.right, sideBarRect.bottom,
             SWP_SHOWWINDOW);
 
+        // iconsize, TODO customize
+        const auto iconSize = ConvertDPI(m_mon, 16);
+        m_iconSize = { iconSize, iconSize };
         if (winrt::MUCSB::MicaController::IsSupported())
         {
             // We ensure that there is a Windows.System.DispatcherQueue on the current thread.
@@ -155,6 +158,9 @@ namespace winrt::vertical_tasks::implementation
                     }
                 });
         }
+
+        m_ungroupedTaskHeader = (winrt::make<winrt::vertical_tasks::implementation::TaskVM>(nullptr,
+            DispatcherQueue(), m_iconSize, winrt::vertical_tasks::GroupId::Ungrouped, true, 0)).as<winrt::vertical_tasks::TaskVM>();
     }
 
     void MainWindow::SetupSystemBackdropConfiguration()
@@ -216,7 +222,7 @@ namespace winrt::vertical_tasks::implementation
                 const int ungroupedTasks = m_tasksByGroup.at(m_ungroupedTaskHeader).Size();
 
                 auto newTask = winrt::make<winrt::vertical_tasks::implementation::TaskVM>(hwnd, 
-                    DispatcherQueue(), groupId, false, ungroupedTasks + 1);
+                    DispatcherQueue(), m_iconSize, groupId, false, ungroupedTasks + 1);
                 auto newItem = newTask.as<winrt::vertical_tasks::TaskVM>();
 
                 m_tasksByGroup.at(m_ungroupedTaskHeader).Append(newItem);
@@ -307,7 +313,7 @@ namespace winrt::vertical_tasks::implementation
 
         // Create new group and update tasks list and create list entry in tasks by group map
         auto newGroup = winrt::make<winrt::vertical_tasks::implementation::TaskVM>(nullptr,
-            DispatcherQueue(), newGroupId, true, 0);
+            DispatcherQueue(), m_iconSize, newGroupId, true, 0);
         newGroup.IsGroupedTask(false);
 
         m_tasks->get_container().insert(m_tasks->get_container().begin(), newGroup);
@@ -582,12 +588,9 @@ namespace winrt::vertical_tasks::implementation
         {
         case HSHELL_WINDOWACTIVATED:
         case HSHELL_RUDEAPPACTIVATED:
-        {
-            SelectItem(reinterpret_cast<HWND>(lParam));
-        }
-        break;
         case HSHELL_WINDOWCREATED:
         {
+            SelectItem(reinterpret_cast<HWND>(lParam));
             // add the window
             auto&& added = AddOrUpdateWindow(reinterpret_cast<HWND>(lParam), true /*send change update*/);
             if (added)
