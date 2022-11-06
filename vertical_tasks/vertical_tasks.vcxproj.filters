@@ -21,6 +21,7 @@
     <ClInclude Include="TaskVM.h" />
     <ClInclude Include="PositioningHelpers.h" />
     <ClInclude Include="ImageHelper.h" />
+    <ClInclude Include="OpenWindow.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Assets">

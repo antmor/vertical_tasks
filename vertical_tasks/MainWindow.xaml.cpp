@@ -1,4 +1,4 @@
-﻿#include "pch.h"
+#include "pch.h"
 
 #include "MainWindow.xaml.h"
 #if __has_include("MainWindow.g.cpp")
@@ -8,7 +8,7 @@
 #include <microsoft.ui.xaml.window.h>
 #include <dispatcherqueue.h>
 
-#include <winrt/Windows.Foundation.Collections.h>
+#include <winrt\Windows.Foundation.Collections.h>
 
 #include <winrt\microsoft.ui.xaml.h>
 #include <winrt\windows.ui.core.h>
@@ -94,7 +94,7 @@ namespace winrt::vertical_tasks::implementation
                 // You now have an AppWindow object, and you can call its methods to manipulate the window.
                 // As an example, let's change the title text of the window.
                 appWindow.TitleBar().ExtendsContentIntoTitleBar(true);
-                appWindow.Title(L"v");
+                appWindow.Title(L"");
             }
         }
 
@@ -106,6 +106,10 @@ namespace winrt::vertical_tasks::implementation
         EnableMenuItem(GetSystemMenu(m_hwnd, FALSE), SC_CLOSE,
             MF_BYCOMMAND | MF_DISABLED | MF_GRAYED);
 
+        newStyle = GetWindowLong(m_hwnd, GWL_EXSTYLE);
+
+        WI_SetFlag(newStyle, WS_EX_NOACTIVATE);
+        SetWindowLong(m_hwnd, GWL_EXSTYLE, newStyle);
         // position on the left of the monitor, TODO customize
         m_mon = MonitorFromWindow(m_hwnd, MONITOR_DEFAULTTONULL);
         MONITORINFOEXW monitorInfo{ sizeof(MONITORINFOEXW) };
@@ -256,7 +260,6 @@ namespace winrt::vertical_tasks::implementation
     //int i = 0;
     void MainWindow::myButton_Click(IInspectable const&, RoutedEventArgs const&)
     {
-        myButton().Content(box_value(L"Clicked"));
         m_tasks->Clear();
         EnumWindows(&WindowEnumerationCallBack, reinterpret_cast<LPARAM>(this));
         //m_tasks->do_call_changed(Windows::Foundation::Collections::CollectionChange::Reset, 0u);
@@ -272,6 +275,16 @@ namespace winrt::vertical_tasks::implementation
                         strong->OnShellMessage(wParam, lParam);
                     }
                 });
+        }
+    }
+
+    void MainWindow::print_Click(Windows::Foundation::IInspectable const& , Microsoft::UI::Xaml::RoutedEventArgs const& )
+    {
+        for (auto&& task : wil::make_range(m_tasks->begin(), m_tasks->end()))
+        {
+            OutputDebugString(L"TASK:");
+            auto curTask = task.as<vertical_tasks::implementation::TaskVM>();
+            curTask->Print();
         }
     }
 
@@ -373,14 +386,16 @@ namespace winrt::vertical_tasks::implementation
     }
 
     void MainWindow::TaskClick(winrt::Windows::Foundation::IInspectable const& sender,
-        winrt::Microsoft::UI::Xaml::RoutedEventArgs const& /*e*/)
+        winrt::Microsoft::UI::Xaml::RoutedEventArgs const& e)
     {
+        /*auto tapped = e.as< winrt::Microsoft::UI::Xaml::Input::TappedRoutedEventArgs>();
+        tapped.Handled(true);*/
         Microsoft::UI::Xaml::Data::ItemIndexRange deselectRange{ 0, Tasks().Size() };
         myList().DeselectRange(deselectRange);
 
-        Microsoft::UI::Xaml::Controls::Button wrappingButton = sender.as<Microsoft::UI::Xaml::Controls::Button>();
+        auto wrappingButton = sender.try_as<Microsoft::UI::Xaml::FrameworkElement>();
         auto clickedTaskVM = wrappingButton.DataContext().as<vertical_tasks::implementation::TaskVM>();
-
+        OutputDebugString(wrappingButton.Name().c_str());
         if (clickedTaskVM->IsGroupId())
         {
             m_justClickedGroupTask = true;
@@ -397,6 +412,26 @@ namespace winrt::vertical_tasks::implementation
         else
         {
             clickedTaskVM->Select();
+        }
+    }
+
+    void MainWindow::TaskRightClick(winrt::Windows::Foundation::IInspectable const& sender,
+        winrt::Microsoft::UI::Xaml::Input::RightTappedRoutedEventArgs const& /*e*/)
+    {
+        Microsoft::UI::Xaml::Data::ItemIndexRange deselectRange{ 0, Tasks().Size() };
+        myList().DeselectRange(deselectRange);
+
+        //Microsoft::UI::Xaml::Controls::Button wrappingButton = sender.as<Microsoft::UI::Xaml::Controls::Button>();
+        auto gridParent = sender.as<Microsoft::UI::Xaml::Controls::Grid>();
+        auto items = gridParent.Children();
+        for (auto&& item : items)
+        {
+            auto name = item.as< Microsoft::UI::Xaml::FrameworkElement>().Name();
+            if (name == L"taskVMFlyout")
+            {
+                auto button = item.as<Microsoft::UI::Xaml::Controls::Button>();
+                button.Flyout().ShowAt(button);
+            }
         }
     }
 
@@ -460,8 +495,6 @@ namespace winrt::vertical_tasks::implementation
 		auto scope = selectionFromClick.onInScope();
 
         std::vector<HWND> windowsToShow;
-
-        // auto scope = selectionFromClick.onInScope();
 
         auto selection = myList().SelectedItems();
         for (auto&& item : selection)
@@ -529,7 +562,7 @@ namespace winrt::vertical_tasks::implementation
 
         if (found != m_tasks->end())
         {
-			auto taskVM = found->as<vertical_tasks::implementation::TaskVM>();
+            auto taskVM = found->as<vertical_tasks::implementation::TaskVM>();
             if (taskVM->ProcessName().find(L"devenv") != std::wstring::npos)
             {
                 // skip visual studio. 
@@ -551,7 +584,8 @@ namespace winrt::vertical_tasks::implementation
 
         if (found != m_tasks->end())
         {
-            const auto indexToErase{ std::distance(m_tasks->begin(), found) };
+            auto begin = m_tasks->begin();
+            const auto indexToErase{ std::distance(begin, found) };
             m_tasks->get_container().erase(found);
             m_tasks->do_call_changed(Windows::Foundation::Collections::CollectionChange::ItemRemoved, 
                 static_cast<uint32_t>(indexToErase));
@@ -582,38 +616,51 @@ namespace winrt::vertical_tasks::implementation
     {
         auto strong = get_strong();
         co_await wil::resume_foreground(DispatcherQueue());
+        const bool wasRude = WI_IsFlagSet(wParam, HSHELL_HIGHBIT);
+        WI_ClearFlag(wParam, HSHELL_HIGHBIT);
         std::wstringstream myString;
         myString << L"shell message: " << wParam << L", " << std::hex << lParam;
+        if (wasRude) { myString << L" RUDE "; }
         switch (wParam)
         {
-        case HSHELL_WINDOWACTIVATED:
-        case HSHELL_RUDEAPPACTIVATED:
         case HSHELL_WINDOWCREATED:
         {
-            SelectItem(reinterpret_cast<HWND>(lParam));
             // add the window
             auto&& added = AddOrUpdateWindow(reinterpret_cast<HWND>(lParam), true /*send change update*/);
             if (added)
             {
                 SelectItem(reinterpret_cast<HWND>(lParam));
+                myString << L" Created ";
             }
+            else
+            {
+                myString << L" NOT Created ";
+            }
+            break;
         }
-        break;
+        case HSHELL_WINDOWACTIVATED:
+        {
+            SelectItem(reinterpret_cast<HWND>(lParam));
+            myString << L" Activated ";
+            break;
+        }
         case HSHELL_WINDOWDESTROYED:
         {
             DeleteItem(reinterpret_cast<HWND>(lParam));
+            myString << L" Destroyed ";
+            break;
         }
-        break;
         case HSHELL_REDRAW:
         {
             RenameItem(reinterpret_cast<HWND>(lParam));
+            myString << L" Redraw ";
+            break;
         }
-        break;
         default:
         {
             myString << L" ! UNKNOWN";
+            break;
         }
-        break;
         }
         myString << std::endl;
         OutputDebugString(myString.str().c_str());

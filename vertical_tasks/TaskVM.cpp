@@ -2,6 +2,10 @@
 #include "TaskVM.h"
 #include "TaskVM.g.cpp"
 
+#include <iostream>
+#include <sstream>
+
+
 #include "imagehelper.h"
 #include <winrt/microsoft.ui.xaml.media.imaging.h>
 #include <appmodel.h>
@@ -24,146 +28,47 @@ namespace winui
     using namespace winrt::Microsoft::UI::Xaml::Media;
     using namespace winrt::Microsoft::UI::Xaml::Media::Imaging;
 }
-const static std::wstring_view s_app_frame_host{ L"ApplicationFrameHost.exe" };
-
-// Get the executable path or module name for modern apps
-inline ProcessID get_process_path(DWORD pid, bool uwpRequery = false) noexcept
-{
-    wil::unique_handle process{ OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_VM_READ, TRUE, pid) };
-    std::wstring name = L"no process handle";
-    if (process)
-    {
-        name.resize(MAX_PATH);
-        DWORD name_length = static_cast<DWORD>(name.length());
-        if (QueryFullProcessImageNameW(process.get(), 0, (LPWSTR)name.data(), &name_length) == 0)
-        {
-            name_length = 0;
-        }
-        name.resize(name_length);
-        if (uwpRequery)
-        {
-            UINT32 aumidL{};
-            LOG_IF_WIN32_ERROR(GetApplicationUserModelId(process.get(), &aumidL, nullptr));
-            if (aumidL > 0)
-            {
-                std::wstring aumid = L"no process handle";
-                aumid.resize(aumidL + 1);
-                LOG_IF_WIN32_ERROR(GetApplicationUserModelId(process.get(), &aumidL, aumid.data()));
-                aumid.resize(aumidL);
-                return { name, aumid };
-            }
-        }
-
-    }
-    return { name };
-}
-
-// Get the executable path or module name for modern apps
-inline ProcessID get_process_path(HWND window) noexcept
-{
-    DWORD pid{};
-    GetWindowThreadProcessId(window, &pid);
-    auto&& [name, aumid] = get_process_path(pid);
-
-    if (name.length() >= s_app_frame_host.length() &&
-        // ends_with
-        name.compare(name.length() - s_app_frame_host.length(), s_app_frame_host.length(), s_app_frame_host) == 0)
-    {
-        // It is a UWP app. We will enumerate the windows and look for one created
-        // by something with a different PID
-        DWORD new_pid = pid;
-
-        EnumChildWindows(
-            window, [](HWND hwnd, LPARAM param) -> BOOL {
-                auto new_pid_ptr = reinterpret_cast<DWORD*>(param);
-                DWORD pid;
-                GetWindowThreadProcessId(hwnd, &pid);
-                if (pid != *new_pid_ptr)
-                {
-                    *new_pid_ptr = pid;
-                    return FALSE;
-                }
-                else
-                {
-                    return TRUE;
-                }
-            },
-            reinterpret_cast<LPARAM>(&new_pid));
-
-        // If we have a new pid, get the new name.
-        if (new_pid != pid)
-        {
-            return get_process_path(new_pid, true);
-        }
-    }
-
-    return { name };
-}
-
 
 namespace winrt::vertical_tasks::implementation
 {
     winrt::fire_and_forget TaskVM::RefreshTitleAndIcon(bool update)
     {
         // recalc m_procName if we are applicationframehost
-        m_procName = get_process_path(m_hwnd);
 
-        winrt::hstring newTitle;
-        const auto size = GetWindowTextLength(m_hwnd);
-        if (size > 0)
+        winrt::hstring newTitle = m_window.GetTitle();
+
+        co_await winrt::resume_background();
+
+        auto maybeIcon = m_window.TryGetIcon();
+
+        winrt::com_ptr<IWICBitmap> wicBitmap;
+        if (maybeIcon)
         {
-            std::vector<wchar_t> buffer(size + 1);
-            GetWindowText(m_hwnd, buffer.data(), size + 1);
-
-            newTitle = std::wstring_view(buffer.data(), buffer.size());
+            // win32 apps usually provide icons from the window
+            auto imagingFactory = wil::CoCreateInstance<IWICImagingFactory>(CLSID_WICImagingFactory);
+            THROW_IF_FAILED(imagingFactory->CreateBitmapFromHICON(maybeIcon.get(), wicBitmap.put()));
         }
         else
         {
-            LOG_HR_MSG(E_INVALIDARG, "%ws has no window title", m_procName.for_display());
-        }
-
-        co_await winrt::resume_background();
-        wil::unique_hicon icon;
-        SendMessageTimeout(m_hwnd, WM_GETICON, ICON_SMALL2, 0, SMTO_BLOCK | SMTO_ABORTIFHUNG,
-            500/*ms*/, reinterpret_cast<PDWORD_PTR>(&icon));
-        if (!icon)
-        {
-            SendMessageTimeout(m_hwnd, WM_GETICON, ICON_SMALL, 0, SMTO_BLOCK | SMTO_ABORTIFHUNG,
-                500/*ms*/, reinterpret_cast<PDWORD_PTR>(&icon));
-        }
-
-        if (!icon)
-        {
-            icon.reset(reinterpret_cast<HICON>(GetClassLongPtr(m_hwnd, GCLP_HICONSM)));
-        }
-
-        winrt::com_ptr<IWICBitmap> wicBitmap;
-        if (!icon)
-        {
-            if (m_procName.aumid.empty())
+            if (m_window.Aumid().empty())
             {
-                LOG_HR_MSG(E_INVALIDARG, "%ws has no icon", m_procName.for_display());
+                // win32 app without an icon from the window, expected
+                LOG_HR_MSG(E_INVALIDARG, "%ws has no icon", m_window.ProcessName());
             }
             else
             {
-                // use aumid for lookup
+                // uwp app, so use aumid for lookup
                 wil::com_ptr<IShellItemImageFactory> imageFactory;
-                if (SUCCEEDED_LOG(SHCreateItemInKnownFolder(FOLDERID_AppsFolder, KF_FLAG_DONT_VERIFY, m_procName.aumid.c_str(), IID_PPV_ARGS(&imageFactory))))
+                if (SUCCEEDED_LOG(SHCreateItemInKnownFolder(FOLDERID_AppsFolder, KF_FLAG_DONT_VERIFY, m_window.Aumid().c_str(), IID_PPV_ARGS(&imageFactory))))
                 {
                     wil::unique_hbitmap iconBitmap;
-                    
+
                     THROW_IF_FAILED(imageFactory->GetImage(m_iconSize, SIIGBF_BIGGERSIZEOK, &iconBitmap));
 
                     auto imagingFactory = wil::CoCreateInstance<IWICImagingFactory>(CLSID_WICImagingFactory);
                     THROW_IF_FAILED(imagingFactory->CreateBitmapFromHBITMAP(iconBitmap.get(), nullptr, WICBitmapUsePremultipliedAlpha, wicBitmap.put()));
                 }
             }
-        }
-        else
-        {
-            auto imagingFactory = wil::CoCreateInstance<IWICImagingFactory>(CLSID_WICImagingFactory);
-            THROW_IF_FAILED(imagingFactory->CreateBitmapFromHICON(icon.get(), wicBitmap.put()));
-
         }
 
         winrt::SoftwareBitmap bitmap{ nullptr };
@@ -180,12 +85,19 @@ namespace winrt::vertical_tasks::implementation
             }
         }
 
-        if (update
-            && (bitmap || (m_title != newTitle)))
+        const bool hasChanges = (bitmap || (m_title != newTitle));
+        if (update && hasChanges)
         {
             if (auto queue = m_uiThread.get())
             {
                 co_await wil::resume_foreground(queue);
+
+                // send change notification
+                if (m_title != newTitle)
+                {
+                    m_title = newTitle;
+                    OnPropertyChanged(L"Title");
+                }
 
                 if (bitmap)
                 {
@@ -194,53 +106,34 @@ namespace winrt::vertical_tasks::implementation
                     IconSource(source);
                 }
 
-                // send change notification
-                if (m_title != newTitle) 
-                {
-                    m_title = newTitle;
-                    OnPropertyChanged(L"Title");
-                }
             }
         }
     }
 
+    void TaskVM::Select()   { Print(L"Select");         m_window.Select(); }
+    void TaskVM::Close()    { Print(L"Close");          m_window.Close(); };
+    void TaskVM::Kill()     { Print(L"Kill");           m_window.Kill(); };
+    void TaskVM::Minimize() { Print(L"Minimize");       m_window.Minimize(); }
 
-    void TaskVM::Select()
+    void TaskVM::Print()
     {
-        WINDOWPLACEMENT wPos{};
-        GetWindowPlacement(m_hwnd, &wPos);
+        Print(L"");
+    }
 
-        if ((wPos.showCmd == SW_MINIMIZE) || (wPos.showCmd == SW_SHOWMINIMIZED))
+    void TaskVM::Print(std::wstring_view category)
+    {
+        std::wstringstream myString;
+        auto hwnd = m_window.HWND();
+        myString << L"\tWindow: " << std::hex << hwnd;
+        myString << L"\tProc: " << m_window.ProcessName() << std::endl;
+        if (category.empty())
         {
-            SetForegroundWindow(m_hwnd);
-            if (!ShowWindow(m_hwnd, SW_RESTORE))
-            {
-                // ShowWindow doesn't work if the process is running elevated: fallback to SendMessage
-                SendMessage(m_hwnd, WM_SYSCOMMAND, SC_RESTORE, 0);
-            }
+            myString << L"\t Cloak State: " << m_window.IsCloaked() << std::endl;
         }
         else
         {
-            Minimize();
+            myString << category << std::endl;
         }
-    }
-
-    void TaskVM::Close()
-    {
-        SendMessage(m_hwnd, WM_SYSCOMMAND, SC_CLOSE, 0);
-    }
-
-    void TaskVM::Kill()
-    {
-        DWORD processId;
-        GetWindowThreadProcessId(m_hwnd, &processId);
-        wil::unique_handle processHandle(OpenProcess(PROCESS_TERMINATE, FALSE, processId));
-        TerminateProcess(processHandle.get(), 0);
-    }
-
-
-    void TaskVM::Minimize()
-    {
-        SendMessage(m_hwnd, WM_SYSCOMMAND, SC_MINIMIZE, 0);
+        OutputDebugString(myString.str().c_str());
     }
 }

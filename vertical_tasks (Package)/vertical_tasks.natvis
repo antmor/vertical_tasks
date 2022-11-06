@@ -1,7 +1,7 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
     <Type Name="winrt::vertical_tasks::implementation::TaskVM">
-        <DisplayString Condition="m_procName.aumid._Mypair._Myval2._Mysize== 0">{m_procName.processPath}</DisplayString>
+        <DisplayString Condition="m_procName.aumid._MyFirst == 0">{m_procName.processPath}</DisplayString>
         <DisplayString >{m_procName.aumid}</DisplayString>
     </Type>
     <Type Name ="winrt::vertical_tasks::implementation::MyTasks">
@@ -13,9 +13,6 @@
         </Expand>
     </Type>
     <Type Name ="winrt::vertical_tasks::ITaskVM">
-        <MostDerivedType>(winrt::vertical_tasks::implementation::TaskVM*)this</MostDerivedType>
-    </Type>
-    <Type Name ="winrt::vertical_tasks::TaskVM">
         <MostDerivedType>(winrt::vertical_tasks::implementation::TaskVM*)this</MostDerivedType>
     </Type>
 </AutoVisualizer>

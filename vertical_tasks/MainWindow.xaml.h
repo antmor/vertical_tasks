@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include "MainWindow.g.h"
 #include <winrt\microsoft.ui.xaml.h>
 #include "TaskVM.h"
@@ -7,6 +7,8 @@
 
 #include <winrt\windows.system.h>
 #include <winrt\microsoft.ui.composition.h>
+#include <winrt\microsoft.ui.xaml.controls.h>
+#include <winrt\microsoft.ui.xaml.input.h>
 #include <winrt\Microsoft.UI.Composition.SystemBackdrops.h>
 
 namespace winrt
@@ -20,7 +22,9 @@ namespace winrt
 namespace winrt::vertical_tasks::implementation
 {
     using namespace Windows::Foundation::Collections;
-    struct MyTasks : public implements<MyTasks, IObservableVector<IInspectable>, IVector<IInspectable>, IVectorView<IInspectable>, IIterable<IInspectable>>,
+    struct MyTasks : public implements<MyTasks,
+        IObservableVector<IInspectable>, IVector<IInspectable>, IVectorView<IInspectable>, IIterable<IInspectable>,
+        MUX::Controls::IKeyIndexMapping>,
         winrt::observable_vector_base<MyTasks, IInspectable>
     {
         auto& get_container() const noexcept
@@ -33,6 +37,7 @@ namespace winrt::vertical_tasks::implementation
             return m_values;
         }
 
+
         auto begin()
         {
             return get_container().begin();
@@ -43,17 +48,27 @@ namespace winrt::vertical_tasks::implementation
             return get_container().end();
         }
 
+        auto begin() const
+        {
+            return get_container().begin();
+
+        }
+        auto end() const
+        {
+            return get_container().end();
+        }
+
         auto find(HWND hwnd)
         {
-            return std::find_if(begin(), end(), [hwnd](IInspectable& other)
+            return std::find_if(begin(), end(), [hwnd](const IInspectable& other)
                 {
                     return hwnd == other.as<vertical_tasks::implementation::TaskVM>()->Hwnd();
                 });
         }
 
-        auto find(winrt::hstring title)
+        auto find(winrt::hstring title) const
         {
-            return std::find_if(begin(), end(), [title](IInspectable& other)
+            return std::find_if(begin(), end(), [title](const IInspectable& other)
                 {
                     return title == other.as<vertical_tasks::implementation::TaskVM>()->Title();
                 });
@@ -92,6 +107,31 @@ namespace winrt::vertical_tasks::implementation
             call_changed(change, index);
         }
 
+        hstring KeyFromIndex(int32_t index) const
+        {
+            auto hwnd = m_values[index].as<vertical_tasks::implementation::TaskVM>()->Hwnd();
+            return winrt::to_hstring(reinterpret_cast<int32_t>(hwnd));
+        }
+
+        int32_t IndexFromKey(const hstring& key) const
+        {
+            auto hwndKey = reinterpret_cast<HWND>(std::stoi(key.c_str()));
+            int32_t i = 0;
+            auto found = std::find_if(begin(), end(), [hwndKey, &i](const IInspectable& other)
+            {
+                i++;
+                return hwndKey == other.as<vertical_tasks::implementation::TaskVM>()->Hwnd();
+            });
+            if (found != end())
+            {
+                return i;
+            }
+            else
+            {
+                return -1;
+            }
+        }
+
         u_int m_taskCount = 0;
     private:
         std::vector<IInspectable> m_values{ };
@@ -103,6 +143,8 @@ namespace winrt::vertical_tasks::implementation
         MainWindow();
 
         void myButton_Click(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+        void print_Click(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::RoutedEventArgs const& args);
+
         winrt::fire_and_forget OnSelectionChanged(Windows::Foundation::IInspectable const& sender, Microsoft::UI::Xaml::Controls::SelectionChangedEventArgs const& args);
 
         IObservableVector<IInspectable> Tasks() 
@@ -126,6 +168,8 @@ namespace winrt::vertical_tasks::implementation
         void DeleteItem(HWND hwnd);
 
         void TaskClick(winrt::Windows::Foundation::IInspectable const& sender, winrt::Microsoft::UI::Xaml::RoutedEventArgs const& e);
+        void TaskRightClick(winrt::Windows::Foundation::IInspectable const& sender, winrt::Microsoft::UI::Xaml::Input::RightTappedRoutedEventArgs const& e);
+
         void AddGroup(winrt::Windows::Foundation::IInspectable const& sender, winrt::Microsoft::UI::Xaml::RoutedEventArgs const& e);
         void MoveToGroup(winrt::Windows::Foundation::IInspectable const& sender, winrt::Microsoft::UI::Xaml::RoutedEventArgs const& e);
 

@@ -2,26 +2,8 @@
 #include <pch.h>
 
 #include "TaskVM.g.h"
-#include <wil\resource.h>
-#include <dwmapi.h>
 
-inline BOOL TaskListDeleted(HWND m_hwnd)
-{
-    return GetProp(m_hwnd, L"ITaskList_Deleted") != NULL;
-}
-
-struct ProcessID
-{
-    std::wstring processPath{};
-    std::wstring aumid{};
-
-    auto for_display()
-    {
-        return aumid.empty()
-            ? processPath.c_str()
-            : aumid.c_str();
-    }
-};
+#include "OpenWindow.h"
 
 namespace winrt::vertical_tasks::implementation
 {
@@ -33,7 +15,7 @@ namespace winrt::vertical_tasks::implementation
             const winrt::vertical_tasks::GroupId groupId,
             const bool isGroup,
             const u_int groupIndex) :
-            m_hwnd(reinterpret_cast<HWND>(hwnd)),
+            m_window(reinterpret_cast<HWND>(hwnd)),
             m_uiThread(uiThread),
             m_iconSize(iconSize),
             m_isGroupHeader(isGroup),
@@ -194,7 +176,7 @@ namespace winrt::vertical_tasks::implementation
 
         HWND Hwnd() const
         {
-            return m_hwnd;
+            return m_window.HWND();
         }
 
         bool isGroupHeader()
@@ -204,7 +186,7 @@ namespace winrt::vertical_tasks::implementation
 
         std::wstring_view ProcessName() const
         {
-            return m_procName.processPath;
+            return m_window.ProcessName();
         }
 
         u_int GroupIndex() const
@@ -219,19 +201,20 @@ namespace winrt::vertical_tasks::implementation
 
         static bool IsValidWindow(HWND hwnd)
         {
-            DWORD cloakAttrib;
-            DwmGetWindowAttribute(hwnd, DWMWA_CLOAKED, &cloakAttrib, sizeof(cloakAttrib));
-            const bool isCloaked = cloakAttrib != 0;
             const auto wsf = GetWindowLong(hwnd, GWL_EXSTYLE);
             return IsWindow(hwnd) && IsWindowVisible(hwnd) && (0 == GetWindow(hwnd, GW_OWNER)) &&
-                (WI_IsFlagClear(wsf, WS_EX_TOOLWINDOW) || WI_IsFlagSet(wsf, WS_EX_APPWINDOW)) && !TaskListDeleted(hwnd) && !isCloaked;
+                (WI_IsFlagClear(wsf, WS_EX_TOOLWINDOW) || WI_IsFlagSet(wsf, WS_EX_APPWINDOW)) && !TaskListDeleted(hwnd);
         }
 
         void SetIconSize(SIZE size)
         {
             m_iconSize = size;
         }
+
+        void Print();
     private:
+
+        void Print(std::wstring_view category);
 
         bool m_isGroupHeader;
         bool m_isGroupedTask;
@@ -243,9 +226,7 @@ namespace winrt::vertical_tasks::implementation
         bool m_isGroupFourAvailable = false;
 
         winrt::vertical_tasks::GroupId m_groupId;
-
-        HWND m_hwnd{};
-        ProcessID m_procName{};
+        OpenWindow m_window;
         SIZE m_iconSize{};
 
         winrt::weak_ref<winrt::Microsoft::UI::Dispatching::DispatcherQueue> m_uiThread{ nullptr };

@@ -1,4 +1,4 @@
-﻿<Window
+<Window
     x:Class="vertical_tasks.MainWindow"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -8,27 +8,53 @@
     xmlns:muxc="using:Microsoft.UI.Xaml.Controls"
     mc:Ignorable="d"
     >
+    <Grid HorizontalAlignment="Stretch" VerticalAlignment="Center">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+              <ColumnDefinition />
+        </Grid.ColumnDefinitions>
+        <StackPanel Grid.Row="0" Orientation="Horizontal"
+                    HorizontalAlignment="Left" VerticalAlignment="Center">
+            <Button x:Name="myButton" Click="myButton_Click" >🪟</Button>
+            <Button x:Name="print" Click="print_Click" >🖨️</Button>
+        </StackPanel>
 
-    <StackPanel Orientation="Vertical" HorizontalAlignment="Left" VerticalAlignment="Center">
-        <Button x:Name="myButton" Click="myButton_Click">🪟</Button> 
         <ListView x:Name="myList" 
                   SelectionMode="Extended"
                   ItemsSource="{x:Bind Tasks}" 
                   SelectionChanged="OnSelectionChanged"
+                  VerticalAlignment="Top"
                   HorizontalAlignment="Stretch"
                   CanDragItems="True"
                   CanReorderItems="True"
                   AllowDrop="True"
-                  Width="250"
-                  Height="750"
                   Padding="0"
+                    Grid.Row="1"
                   >
             <ListView.ItemTemplate>
                 <DataTemplate x:DataType="local:TaskVM">
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-                        <Button Background="Transparent" BorderThickness="0" Click="TaskClick"
-                            Margin="0" Padding="0" Width="200" MinHeight="40"
-                            HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+                    <Grid x:Name="TaskGrid"
+                          HorizontalAlignment="Stretch"
+                         RightTapped ="TaskRightClick" >
+                         <!--Tapped="TaskClick">-->
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="20"/>
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="8*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Button x:Uid="Main" x:Name="TaskMainButton" Background="Transparent"
+                                BorderThickness="0" Click="TaskClick"
+                                Margin="0" Padding="0" MinHeight="40"
+                                HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Left"
+                                Width="Auto"
+                                Grid.Column="0">
                             <Button.Resources>
                                 <ResourceDictionary>
                                     <ResourceDictionary.ThemeDictionaries>
@@ -55,7 +81,10 @@
                                     </ResourceDictionary.ThemeDictionaries>
                                 </ResourceDictionary>
                             </Button.Resources>
-                            <Grid Margin="0,0,0,0" Padding="0,0,0,0" MinWidth="150" VerticalAlignment="Stretch">
+                            <Grid Margin="0,0,0,0" Padding="0,0,0,0"
+                                  VerticalAlignment="Stretch"
+                                  HorizontalAlignment="Left"
+                                  >
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="20"/>
                                 </Grid.RowDefinitions>
@@ -65,39 +94,49 @@
                                     <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
                                 <TextBlock Text="       "
-                                        Visibility="{x:Bind IsGroupedTask, Mode=OneWay}"
-                                        FontFamily="Segoe UI Variable Static Small"
-                                        FontSize="14"
-                                        HorizontalAlignment="Left"
-                                           MinWidth="40"
-                                    />
+                                    Visibility="{x:Bind IsGroupedTask, Mode=OneWay}"
+                                    FontFamily="Segoe UI Variable Static Small"
+                                    FontSize="14"
+                                    HorizontalAlignment="Left"
+                                        MinWidth="40"
+                                />
                                 <Image Name="AppIcon" 
-                                        Width ="16"
-                                        Height="16"
-                                        Margin="2,0,2,0"
-                                        VerticalAlignment="Center"
-                                        HorizontalAlignment="Center"
-                                        Grid.Column="1"
-                                        Source ="{x:Bind IconSource, Mode=OneWay}"
-                                        Visibility="{x:Bind IsTask, Mode=OneWay}"
-                                   />
+                                    Width ="16"
+                                    Height="16"
+                                    Margin="2,0,2,0"
+                                    VerticalAlignment="Center"
+                                    HorizontalAlignment="Center"
+                                    Grid.Column="1"
+                                    Source ="{x:Bind IconSource, Mode=OneWay}"
+                                    Visibility="{x:Bind IsTask, Mode=OneWay}"
+                                />
                                 <TextBlock Grid.Column="2"
-                                        Text="{x:Bind Title, Mode=OneWay}"
-                                        Style="{ThemeResource BaseTextBlockStyle}"
-                                        HorizontalAlignment="Left"
-                                        TextTrimming="CharacterEllipsis"
-                                        FontSize="12"
-                                        Margin="6,0,0,0"
-                                        MinWidth="150"
-                                        MaxWidth="150"/>
+                                    Text="{x:Bind Title, Mode=OneWay}"
+                                    Style="{ThemeResource BaseTextBlockStyle}"
+                                    HorizontalAlignment="Left"
+                                    TextTrimming="CharacterEllipsis"
+                                    FontSize="12"
+                                    TextWrapping="NoWrap"
+                                    Margin="6,0,0,0"
+                                    Width="Auto"
+                                    />
                             </Grid>
                         </Button>
-                        <Button
+                        <FontIcon
+                            x:Name="TaskDragArea"
+                            FontFamily="Segoe Fluent Icons" Glyph=""
+                                  Opacity=".10"
+                                  Grid.Column="1"
+                                  FontSize="8"
+                                  HorizontalAlignment="Right"/>
+                        <Button x:Name="TaskVMFlyout"
                                 Height="15"
                                 Width="15"
                                 Margin="5,0,0,0"
                                 Padding="0,0,0,0"
                                 Visibility="Visible"
+                                HorizontalAlignment="Right"
+                            Grid.Column="2"
                             >
                             <Button.Resources>
                                 <ResourceDictionary>
@@ -165,11 +204,9 @@
                             </Button.Flyout>
                         </Button>
 
-                    </StackPanel>
+                    </Grid>
                 </DataTemplate>
             </ListView.ItemTemplate>
         </ListView>
-
-
-    </StackPanel>
+    </Grid>
 </Window>
