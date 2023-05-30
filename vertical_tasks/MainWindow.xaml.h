@@ -110,7 +110,7 @@ namespace winrt::vertical_tasks::implementation
         hstring KeyFromIndex(int32_t index) const
         {
             auto hwnd = m_values[index].as<vertical_tasks::implementation::TaskVM>()->Hwnd();
-            return winrt::to_hstring(reinterpret_cast<int32_t>(hwnd));
+            return winrt::to_hstring(reinterpret_cast<ULONG_PTR>(hwnd));
         }
 
         int32_t IndexFromKey(const hstring& key) const

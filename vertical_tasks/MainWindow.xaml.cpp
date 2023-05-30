@@ -386,7 +386,7 @@ namespace winrt::vertical_tasks::implementation
     }
 
     void MainWindow::TaskClick(winrt::Windows::Foundation::IInspectable const& sender,
-        winrt::Microsoft::UI::Xaml::RoutedEventArgs const& e)
+        winrt::Microsoft::UI::Xaml::RoutedEventArgs const& /*e*/)
     {
         /*auto tapped = e.as< winrt::Microsoft::UI::Xaml::Input::TappedRoutedEventArgs>();
         tapped.Handled(true);*/
@@ -427,7 +427,7 @@ namespace winrt::vertical_tasks::implementation
         for (auto&& item : items)
         {
             auto name = item.as< Microsoft::UI::Xaml::FrameworkElement>().Name();
-            if (name == L"taskVMFlyout")
+            if (name == L"TaskVMFlyout")
             {
                 auto button = item.as<Microsoft::UI::Xaml::Controls::Button>();
                 button.Flyout().ShowAt(button);

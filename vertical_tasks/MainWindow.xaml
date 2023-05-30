@@ -8,13 +8,15 @@
     xmlns:muxc="using:Microsoft.UI.Xaml.Controls"
     mc:Ignorable="d"
     >
-    <Grid HorizontalAlignment="Stretch" VerticalAlignment="Center">
+    <ScrollViewer>
+
+        <Grid HorizontalAlignment="Stretch" VerticalAlignment="Center">
         <Grid.RowDefinitions>
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
         <Grid.ColumnDefinitions>
-              <ColumnDefinition />
+            <ColumnDefinition />
         </Grid.ColumnDefinitions>
         <StackPanel Grid.Row="0" Orientation="Horizontal"
                     HorizontalAlignment="Left" VerticalAlignment="Center">
@@ -26,20 +28,20 @@
                   SelectionMode="Extended"
                   ItemsSource="{x:Bind Tasks}" 
                   SelectionChanged="OnSelectionChanged"
-                  VerticalAlignment="Top"
                   HorizontalAlignment="Stretch"
                   CanDragItems="True"
                   CanReorderItems="True"
                   AllowDrop="True"
                   Padding="0"
-                    Grid.Row="1"
+                  Grid.Row="1"
+                  Height="Auto"
                   >
             <ListView.ItemTemplate>
                 <DataTemplate x:DataType="local:TaskVM">
                     <Grid x:Name="TaskGrid"
                           HorizontalAlignment="Stretch"
                          RightTapped ="TaskRightClick" >
-                         <!--Tapped="TaskClick">-->
+                        <!--Tapped="TaskClick">-->
                         <Grid.RowDefinitions>
                             <RowDefinition Height="20"/>
                         </Grid.RowDefinitions>
@@ -136,7 +138,7 @@
                                 Padding="0,0,0,0"
                                 Visibility="Visible"
                                 HorizontalAlignment="Right"
-                            Grid.Column="2"
+                                Grid.Column="2"
                             >
                             <Button.Resources>
                                 <ResourceDictionary>
@@ -209,4 +211,6 @@
             </ListView.ItemTemplate>
         </ListView>
     </Grid>
+    </ScrollViewer>
+
 </Window>

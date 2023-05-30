@@ -3,6 +3,9 @@
 #include <wil\resource.h>
 #include <dwmapi.h>
 #include <appmodel.h>
+#include <string>
+#include <format>
+
 
 const static std::wstring_view s_app_frame_host{ L"ApplicationFrameHost.exe" };
 
@@ -13,6 +16,7 @@ inline BOOL TaskListDeleted(HWND m_hwnd)
 
 struct ProcessId
 {
+    DWORD pid{};
     std::wstring processPath{};
     std::wstring aumid{};
 
@@ -52,12 +56,12 @@ inline ProcessId get_process_path(DWORD pid, bool uwpRequery = false) noexcept
                 aumid.resize(aumidL + 1);
                 LOG_IF_WIN32_ERROR(GetApplicationUserModelId(process.get(), &aumidL, aumid.data()));
                 aumid.resize(aumidL);
-                return { name, aumid };
+                return { pid, name, aumid };
             }
         }
 
     }
-    return { name };
+    return { pid, name };
 }
 
 // Get the executable path or module name for modern apps
@@ -65,7 +69,7 @@ inline ProcessId get_process_path(HWND window) noexcept
 {
     DWORD pid{};
     GetWindowThreadProcessId(window, &pid);
-    auto&& [name, aumid] = get_process_path(pid);
+    auto&& [_, name, aumid] = get_process_path(pid);
 
     if (name.length() >= s_app_frame_host.length() &&
         // ends_with
@@ -100,7 +104,7 @@ inline ProcessId get_process_path(HWND window) noexcept
         }
     }
 
-    return { name };
+    return { pid, name };
 }
 
 
@@ -109,6 +113,9 @@ struct OpenWindow
     OpenWindow(HWND hwndIn) : m_hwnd(hwndIn)
     {
         m_process = get_process_path(hwndIn);
+        auto formatted = std::format(L"OpenWindow \n\t HWND = {:8x}; Cloaked = {}; PID = {}; \n\tProcess = {};\n\t AUMID = \n",
+            reinterpret_cast<ULONG_PTR>(m_hwnd), IsCloaked(), m_process.pid, m_process.processPath, m_process.aumid);
+        OutputDebugString(formatted.c_str());
     }
 
     HWND HWND() const
@@ -156,7 +163,7 @@ struct OpenWindow
         return newTitle;
     }
 
-    wil::unique_hicon TryGetIcon()
+    wil::unique_hicon TryGetIconFromWindow()
     {
         wil::unique_hicon icon;
         SendMessageTimeout(m_hwnd, WM_GETICON, ICON_SMALL2, 0, SMTO_BLOCK | SMTO_ABORTIFHUNG,

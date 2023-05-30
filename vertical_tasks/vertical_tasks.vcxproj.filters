@@ -35,9 +35,10 @@
     <Manifest Include="app.manifest" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="packages.config" />
+    <Natvis Include="$(MSBuildThisFileDirectory)..\..\natvis\wil.natvis" />
+    <Natvis Include="vertical_tasks.natvis" />
   </ItemGroup>
   <ItemGroup>
-    <Natvis Include="vertical_tasks.natvis" />
+    <None Include="packages.config" />
   </ItemGroup>
 </Project>
