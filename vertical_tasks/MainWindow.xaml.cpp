@@ -93,7 +93,8 @@ namespace winrt::vertical_tasks::implementation
             {
                 // You now have an AppWindow object, and you can call its methods to manipulate the window.
                 // As an example, let's change the title text of the window.
-                appWindow.TitleBar().ExtendsContentIntoTitleBar(true);
+                //appWindow.TitleBar().ExtendsContentIntoTitleBar(true);
+                appWindow.TitleBar().IconShowOptions(winrt::Microsoft::UI::Windowing::IconShowOptions::HideIconAndSystemMenu);
                 appWindow.Title(L"");
             }
         }
@@ -103,8 +104,9 @@ namespace winrt::vertical_tasks::implementation
         WI_ClearFlag(newStyle, WS_MINIMIZEBOX);
         WI_ClearFlag(newStyle, WS_MAXIMIZEBOX);
         SetWindowLong(m_hwnd, GWL_STYLE, newStyle);
-        EnableMenuItem(GetSystemMenu(m_hwnd, FALSE), SC_CLOSE,
-            MF_BYCOMMAND | MF_DISABLED | MF_GRAYED);
+
+        /*EnableMenuItem(GetSystemMenu(m_hwnd, FALSE), SC_CLOSE,
+            MF_BYCOMMAND | MF_DISABLED | MF_GRAYED);*/
 
         newStyle = GetWindowLong(m_hwnd, GWL_EXSTYLE);
 
@@ -229,6 +231,12 @@ namespace winrt::vertical_tasks::implementation
                     DispatcherQueue(), m_iconSize, groupId, false, ungroupedTasks + 1);
                 auto newItem = newTask.as<winrt::vertical_tasks::TaskVM>();
 
+                auto title = newItem.Title();
+                if (title == L"SettingsTaskMainButton")
+                {
+                    // settings is very special, TODO figure it out
+                    return nullptr;
+                }
                 m_tasksByGroup.at(m_ungroupedTaskHeader).Append(newItem);
 
                 if (shouldUpdate)
@@ -549,13 +557,13 @@ namespace winrt::vertical_tasks::implementation
         co_return;
     }
 
-    void MainWindow::SelectItem(HWND hwnd)
+    winrt::vertical_tasks::TaskVM MainWindow::SelectItem(HWND hwnd)
     {
         if (selectionFromClick || m_justClickedGroupTask)
         {
             // we caused the selection, so ignore it. 
             m_justClickedGroupTask = false;
-            return;
+            return nullptr;
         }
         auto scope = selectionFromShell.onInScope();
         auto found = m_tasks->find(hwnd);
@@ -563,22 +571,26 @@ namespace winrt::vertical_tasks::implementation
         if (found != m_tasks->end())
         {
             auto taskVM = found->as<vertical_tasks::implementation::TaskVM>();
-            if (taskVM->ProcessName().find(L"devenv") != std::wstring::npos)
+            auto isDebugging = ::IsDebuggerPresent();
+            if (isDebugging && 
+                (taskVM->ProcessName().find(L"devenv") != std::wstring::npos) ||
+                (taskVM->ProcessName().find(L"windbg") != std::wstring::npos))
             {
-                // skip visual studio. 
+                // skip debuggers while debugging
             }
             else
             {
                 myList().SelectedItem(*found);
             }
+            return found->as<winrt::vertical_tasks::TaskVM>();
         }
         else
         {
-            LOG_HR(E_ACCESSDENIED);
+            return nullptr;
         }
     }
 
-    void MainWindow::DeleteItem(HWND hwnd)
+    winrt::vertical_tasks::TaskVM  MainWindow::DeleteItem(HWND hwnd)
     {
         auto found = m_tasks->find(hwnd);
 
@@ -586,18 +598,19 @@ namespace winrt::vertical_tasks::implementation
         {
             auto begin = m_tasks->begin();
             const auto indexToErase{ std::distance(begin, found) };
+            auto toDelete = found->as<winrt::vertical_tasks::TaskVM>();
             m_tasks->get_container().erase(found);
             m_tasks->do_call_changed(Windows::Foundation::Collections::CollectionChange::ItemRemoved, 
                 static_cast<uint32_t>(indexToErase));
-
+            return toDelete;
         }
         else
         {
-            LOG_HR(E_ACCESSDENIED);
+            return nullptr;
         }
     }
 
-    void MainWindow::RenameItem(HWND hwnd)
+    winrt::vertical_tasks::TaskVM  MainWindow::RenameItem(HWND hwnd)
     {
         auto found = m_tasks->find(hwnd);
 
@@ -605,10 +618,40 @@ namespace winrt::vertical_tasks::implementation
         {
             auto taskVM = found->as<vertical_tasks::implementation::TaskVM>();
             taskVM->RefreshTitleAndIcon(true);
+            
+            return found->as<winrt::vertical_tasks::TaskVM>();
         }
         else
         {
-            LOG_HR(E_ACCESSDENIED);
+            return nullptr;
+        }
+    }
+
+    std::wstring_view HSHELLToString(WPARAM wParam)
+    {
+#define CASE(x) case HSHELL_##x: return L#x
+        switch (wParam)
+        {
+            CASE(WINDOWCREATED);
+            CASE(WINDOWDESTROYED);
+            CASE(ACTIVATESHELLWINDOW);
+            CASE(WINDOWACTIVATED);
+            CASE(GETMINRECT);
+            CASE(REDRAW);
+            CASE(TASKMAN);
+            CASE(LANGUAGE);
+            CASE(SYSMENU);
+            CASE(ENDTASK);
+            CASE(ACCESSIBILITYSTATE);
+            CASE(APPCOMMAND);
+            CASE(WINDOWREPLACED);
+            CASE(WINDOWREPLACING);
+            CASE(MONITORCHANGED);
+            CASE(HIGHBIT);
+            CASE(FLASH);
+            CASE(RUDEAPPACTIVATED);
+        default:
+            return L"UNKNOWN";
         }
     }
 
@@ -619,7 +662,7 @@ namespace winrt::vertical_tasks::implementation
         const bool wasRude = WI_IsFlagSet(wParam, HSHELL_HIGHBIT);
         WI_ClearFlag(wParam, HSHELL_HIGHBIT);
         std::wstringstream myString;
-        myString << L"shell message: " << wParam << L", " << std::hex << lParam;
+        myString << L"shell message: " << HSHELLToString(wParam) << L", " << std::hex << lParam;
         if (wasRude) { myString << L" RUDE "; }
         switch (wParam)
         {
@@ -627,33 +670,55 @@ namespace winrt::vertical_tasks::implementation
         {
             // add the window
             auto&& added = AddOrUpdateWindow(reinterpret_cast<HWND>(lParam), true /*send change update*/);
+
             if (added)
             {
                 SelectItem(reinterpret_cast<HWND>(lParam));
-                myString << L" Created ";
+                myString << L" Created " << added.DebugInfo();
             }
             else
             {
-                myString << L" NOT Created ";
+                myString << L" NOT Created, probably a system app or cloaked";
             }
             break;
         }
         case HSHELL_WINDOWACTIVATED:
         {
-            SelectItem(reinterpret_cast<HWND>(lParam));
-            myString << L" Activated ";
+            auto selected = SelectItem(reinterpret_cast<HWND>(lParam));
+            if (selected)
+            {
+                myString << L" Activated " << selected.DebugInfo();
+            }
+            else
+            {
+                myString << L"Activated " << std::hex << lParam << L" probably a system app or cloaked";
+            }
             break;
         }
         case HSHELL_WINDOWDESTROYED:
         {
-            DeleteItem(reinterpret_cast<HWND>(lParam));
-            myString << L" Destroyed ";
+            auto deleted = DeleteItem(reinterpret_cast<HWND>(lParam));
+            if (deleted)
+            {
+                myString << L" Destroyed " << deleted.DebugInfo();
+            }
+            else
+            {
+                myString << L" Destroyed " << std::hex << lParam << L" probably a system app or cloaked";
+            }
             break;
         }
         case HSHELL_REDRAW:
         {
-            RenameItem(reinterpret_cast<HWND>(lParam));
-            myString << L" Redraw ";
+            auto renamed = RenameItem(reinterpret_cast<HWND>(lParam));
+            if (renamed)
+            {
+                myString << L" Renamed " << renamed.DebugInfo();
+            }
+            else
+            {
+                myString << L" Renamed " << std::hex << lParam << L" probably a system app or cloaked";
+            }
             break;
         }
         default:

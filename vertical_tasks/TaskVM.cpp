@@ -114,6 +114,16 @@ namespace winrt::vertical_tasks::implementation
         }
     }
 
+    hstring TaskVM::DebugInfo() const
+    {
+        auto hwnd = m_window.HWND();
+        std::wstringstream myString;
+        myString << L"\tWindow: " << std::hex << hwnd;
+        myString << L"\tProc: " << m_window.ProcessName();
+        myString << L"\tTitle: " << m_window.CachedTitle() << std::endl;
+        return winrt::hstring{myString.str()};
+    }
+
     void TaskVM::Select()   { Print(L"Select");         m_window.Select(); }
     void TaskVM::Close()    { Print(L"Close");          m_window.Close(); };
     void TaskVM::Kill()     { Print(L"Kill");           m_window.Kill(); };
@@ -127,9 +137,7 @@ namespace winrt::vertical_tasks::implementation
     void TaskVM::Print(std::wstring_view category)
     {
         std::wstringstream myString;
-        auto hwnd = m_window.HWND();
-        myString << L"\tWindow: " << std::hex << hwnd;
-        myString << L"\tProc: " << m_window.ProcessName() << std::endl;
+        myString << DebugInfo();
         if (category.empty())
         {
             myString << L"\t Cloak State: " << m_window.IsCloaked() << std::endl;

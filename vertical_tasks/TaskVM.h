@@ -147,6 +147,8 @@ namespace winrt::vertical_tasks::implementation
             return m_title;
         };
 
+        hstring DebugInfo() const;
+
         Microsoft::UI::Xaml::Media::Imaging::SoftwareBitmapSource IconSource()
         {
             return m_iconSource;

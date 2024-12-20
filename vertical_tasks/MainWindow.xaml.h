@@ -164,8 +164,8 @@ namespace winrt::vertical_tasks::implementation
         };
 
         winrt::vertical_tasks::TaskVM AddOrUpdateWindow(HWND hwnd, bool shouldUpdate = false);
-        void SelectItem(HWND hwnd);
-        void DeleteItem(HWND hwnd);
+        winrt::vertical_tasks::TaskVM SelectItem(HWND hwnd);
+        winrt::vertical_tasks::TaskVM DeleteItem(HWND hwnd);
 
         void TaskClick(winrt::Windows::Foundation::IInspectable const& sender, winrt::Microsoft::UI::Xaml::RoutedEventArgs const& e);
         void TaskRightClick(winrt::Windows::Foundation::IInspectable const& sender, winrt::Microsoft::UI::Xaml::Input::RightTappedRoutedEventArgs const& e);
@@ -173,12 +173,12 @@ namespace winrt::vertical_tasks::implementation
         void AddGroup(winrt::Windows::Foundation::IInspectable const& sender, winrt::Microsoft::UI::Xaml::RoutedEventArgs const& e);
         void MoveToGroup(winrt::Windows::Foundation::IInspectable const& sender, winrt::Microsoft::UI::Xaml::RoutedEventArgs const& e);
 
-        void RenameItem(HWND hwnd);
+        winrt::vertical_tasks::TaskVM  RenameItem(HWND hwnd);
 
     private:
-        Windows::Foundation::IAsyncOperation<Windows::Graphics::Imaging::SoftwareBitmap> GetBitmapFromIconFileAsync(wil::unique_hicon hicon);
+        //Windows::Foundation::IAsyncOperation<Windows::Graphics::Imaging::SoftwareBitmap> GetBitmapFromIconFileAsync(wil::unique_hicon hicon);
         winrt::fire_and_forget OnShellMessage(WPARAM wParam, LPARAM lParam);
-        winrt::fire_and_forget FetchIcon(HWND hwnd);
+        //winrt::fire_and_forget FetchIcon(HWND hwnd);
 
         winrt::com_ptr<MyTasks> m_tasks{ winrt::make_self<MyTasks>() };
         winrt::vertical_tasks::TaskVM m_ungroupedTaskHeader {nullptr};

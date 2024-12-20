@@ -31,6 +31,8 @@ namespace vertical_tasks
 
         UInt32 GroupIndex{ get; set;  };
 
+        String DebugInfo{ get; };
+
         void Select();
         void Close();
         void Minimize();

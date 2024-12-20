@@ -8,12 +8,10 @@
     xmlns:muxc="using:Microsoft.UI.Xaml.Controls"
     mc:Ignorable="d"
     >
-    <ScrollViewer>
-
-        <Grid HorizontalAlignment="Stretch" VerticalAlignment="Center">
+    <Grid HorizontalAlignment="Stretch" VerticalAlignment="Center">
         <Grid.RowDefinitions>
-            <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
         </Grid.RowDefinitions>
         <Grid.ColumnDefinitions>
             <ColumnDefinition />
@@ -23,7 +21,6 @@
             <Button x:Name="myButton" Click="myButton_Click" >🪟</Button>
             <Button x:Name="print" Click="print_Click" >🖨️</Button>
         </StackPanel>
-
         <ListView x:Name="myList" 
                   SelectionMode="Extended"
                   ItemsSource="{x:Bind Tasks}" 
@@ -43,7 +40,7 @@
                          RightTapped ="TaskRightClick" >
                         <!--Tapped="TaskClick">-->
                         <Grid.RowDefinitions>
-                            <RowDefinition Height="20"/>
+                            <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="8*"/>
@@ -88,7 +85,7 @@
                                   HorizontalAlignment="Left"
                                   >
                                 <Grid.RowDefinitions>
-                                    <RowDefinition Height="20"/>
+                                    <RowDefinition Height="Auto"/>
                                 </Grid.RowDefinitions>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto"/>
@@ -200,17 +197,12 @@
                                         <MenuFlyoutItem Text="Group Three" Click="MoveToGroup" Visibility="{x:Bind IsGroupThreeAvailable, Mode=OneWay}"/>
                                         <MenuFlyoutItem Text="Group Four" Click="MoveToGroup"  Visibility="{x:Bind IsGroupFourAvailable, Mode=OneWay}"/>
                                     </MenuFlyoutSubItem>
-
                                 </MenuFlyout>
-
                             </Button.Flyout>
                         </Button>
-
                     </Grid>
                 </DataTemplate>
             </ListView.ItemTemplate>
         </ListView>
     </Grid>
-    </ScrollViewer>
-
 </Window>

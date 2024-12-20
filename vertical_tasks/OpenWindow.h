@@ -138,6 +138,12 @@ struct OpenWindow
         return m_process.for_display();
     }
 
+    
+    const std::wstring_view CachedTitle() const
+    {
+        return m_cachedTitle;
+    }
+
     bool IsCloaked()
     {
         DWORD cloakAttrib;
@@ -160,6 +166,7 @@ struct OpenWindow
         {
             LOG_HR_MSG(E_INVALIDARG, "%ws has no window title", m_process.for_display().data());
         }
+        m_cachedTitle = newTitle;
         return newTitle;
     }
 
@@ -219,4 +226,5 @@ private:
 
     const ::HWND m_hwnd;
     ProcessId m_process;
+    std::wstring m_cachedTitle;
 };
