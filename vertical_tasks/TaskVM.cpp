@@ -57,7 +57,7 @@ namespace winrt::vertical_tasks::implementation
             {
                 // win32 app without an icon from the window, expected
                 auto nameToPrint = m_window.ProcessName();
-                LOG_HR_MSG(E_INVALIDARG, "%ws has no icon", m_window.ProcessName());
+                LOG_HR_MSG(E_INVALIDARG, "%ws has no icon", m_window.ProcessName().data());
             }
             else
             {
