@@ -142,6 +142,7 @@
     <Manifest Include="app.manifest" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="AppBarMessages.h" />
     <ClInclude Include="ImageHelper.h" />
     <ClInclude Include="OpenWindow.h" />
     <ClInclude Include="pch.h" />

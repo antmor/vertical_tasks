@@ -23,6 +23,7 @@
 #include <TaskVM.h>
 
 #include "PositioningHelpers.h"
+#include "AppBarMessages.h"
 
 #include <iostream>
 #include <iterator>
@@ -164,11 +165,14 @@ namespace winrt::vertical_tasks::implementation
                     }
                 });
         }
-
+        //SetWindowSubclass(hwnd, )
         m_ungroupedTaskHeader = (winrt::make<winrt::vertical_tasks::implementation::TaskVM>(nullptr,
             DispatcherQueue(), m_iconSize, winrt::vertical_tasks::GroupId::Ungrouped, true, 0)).as<winrt::vertical_tasks::TaskVM>();
     }
+    //static LRESULT MainWindow::s_SubclassWndProc(HWND hwnd, UINT msgId, WPARAM wParam, LPARAM lParam)
+    //{
 
+    //}
     void MainWindow::SetupSystemBackdropConfiguration()
     {
         m_configuration = winrt::MUCSB::SystemBackdropConfiguration();
@@ -723,7 +727,7 @@ namespace winrt::vertical_tasks::implementation
         }
         default:
         {
-            myString << L" ! UNKNOWN";
+            myString << L" ! UNKNOWN wparam: " << std::hex << wParam << L" lparam: " << lParam;
             break;
         }
         }

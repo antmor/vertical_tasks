@@ -22,6 +22,7 @@
     <ClInclude Include="PositioningHelpers.h" />
     <ClInclude Include="ImageHelper.h" />
     <ClInclude Include="OpenWindow.h" />
+    <ClInclude Include="AppBarMessages.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Assets">
@@ -37,6 +38,7 @@
   <ItemGroup>
     <Natvis Include="$(MSBuildThisFileDirectory)..\..\natvis\wil.natvis" />
     <Natvis Include="vertical_tasks.natvis" />
+    <Natvis Include="$(MSBuildThisFileDirectory)..\..\natvis\wil.natstepfilter" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
