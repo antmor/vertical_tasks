@@ -1,13 +1,5 @@
 #include "pch.h"
-#include "TaskVM.h"
-#include "TaskVM.g.cpp"
 
-#include <iostream>
-#include <sstream>
-
-
-#include "imagehelper.h"
-#include <winrt/microsoft.ui.xaml.media.imaging.h>
 #include <appmodel.h>
 #include <winuser.h>
 #include <knownfolders.h>
@@ -15,6 +7,17 @@
 #include <shlobj_core.h>
 #include <windows.graphics.imaging.h>
 #include <windows.graphics.imaging.interop.h>
+
+#include <iostream>
+#include <sstream>
+
+#include <winrt/microsoft.ui.xaml.media.imaging.h>
+
+#include "imagehelper.h"
+#include "EnumToString.h"
+
+#include "TaskVM.h"
+#include "TaskVM.g.cpp"
 
 namespace winrt
 {
@@ -36,7 +39,7 @@ namespace winrt::vertical_tasks::implementation
         // recalc m_procName if we are applicationframehost
 
         winrt::hstring newTitle = m_window.GetTitle();
-
+        bool isVisible = { m_window.IsValidWindow() };
         auto weak_ref{ get_weak() };
         co_await winrt::resume_background();
 
@@ -57,7 +60,7 @@ namespace winrt::vertical_tasks::implementation
             {
                 // win32 app without an icon from the window, expected
                 auto nameToPrint = m_window.ProcessName();
-                LOG_HR_MSG(E_INVALIDARG, "%ws has no icon", m_window.ProcessName().data());
+                //LOG_HR_MSG(E_INVALIDARG, "%ws has no icon", m_window.ProcessName().data());
             }
             else
             {
@@ -102,6 +105,8 @@ namespace winrt::vertical_tasks::implementation
                     m_title = newTitle;
                     OnPropertyChanged(L"Title");
                 }
+                m_isVisible = isVisible;
+                OnPropertyChanged(L"TaskVisibility");
 
                 if (bitmap)
                 {
@@ -118,9 +123,15 @@ namespace winrt::vertical_tasks::implementation
     {
         auto hwnd = m_window.HWND();
         std::wstringstream myString;
-        myString << L"\tWindow: " << std::hex << hwnd;
-        myString << L"\tProc: " << m_window.ProcessName();
-        myString << L"\tTitle: " << m_window.CachedTitle() << std::endl;
+        myString << L"\n\tWindow: 0x" << std::hex << hwnd;
+        myString << L"\n\tProc: " << m_window.ProcessName();
+        myString << L"\n\tTitle: " << m_window.CachedTitle();
+        myString << L"\n\tVisible: " << IsWindowVisible(hwnd);
+        myString << L"\tMinimized: " << IsIconic(hwnd);
+        myString << L"\tCloaked: " << m_window.IsCloaked();
+        myString << L"\n\tStyle: " << std::hex << WindowStylesToString(GetWindowLong(hwnd, GWL_STYLE));
+        myString << L"\n\tExStyle: " << std::hex << ExWindowStylesToString(GetWindowLong(hwnd, GWL_EXSTYLE));
+        myString << std::endl;
         return winrt::hstring{myString.str()};
     }
 
@@ -138,11 +149,7 @@ namespace winrt::vertical_tasks::implementation
     {
         std::wstringstream myString;
         myString << DebugInfo();
-        if (category.empty())
-        {
-            myString << L"\t Cloak State: " << m_window.IsCloaked() << std::endl;
-        }
-        else
+        if (!category.empty())
         {
             myString << category << std::endl;
         }

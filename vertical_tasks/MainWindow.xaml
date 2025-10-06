@@ -37,7 +37,8 @@
                 <DataTemplate x:DataType="local:TaskVM">
                     <Grid x:Name="TaskGrid"
                           HorizontalAlignment="Stretch"
-                         RightTapped ="TaskRightClick" >
+                         RightTapped ="TaskRightClick" 
+                          Visibility="{x:Bind TaskVisibility, Mode=OneWay}">
                         <!--Tapped="TaskClick">-->
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>

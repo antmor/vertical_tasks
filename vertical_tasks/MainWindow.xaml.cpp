@@ -297,6 +297,7 @@ namespace winrt::vertical_tasks::implementation
             OutputDebugString(L"TASK:");
             auto curTask = task.as<vertical_tasks::implementation::TaskVM>();
             curTask->Print();
+            OutputDebugString(L"\n");
         }
     }
 

@@ -114,6 +114,7 @@
       <LanguageStandard Condition="'$(Configuration)|$(Platform)'=='Debug|arm64'">stdcpp20</LanguageStandard>
       <LanguageStandard Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">stdcpp20</LanguageStandard>
       <LanguageStandard Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">stdcpp20</LanguageStandard>
+      <PreprocessToFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</PreprocessToFile>
     </ClCompile>
     <Link>
       <AdditionalDependencies>kernel32.lib;user32.lib;Shlwapi.lib;Shcore.lib;shell32.lib;dwmapi.lib;Gdi32.lib;$(CoreLibraryDependencies);%(AdditionalDependencies)</AdditionalDependencies>
@@ -143,6 +144,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AppBarMessages.h" />
+    <ClInclude Include="EnumToString.h" />
     <ClInclude Include="ImageHelper.h" />
     <ClInclude Include="OpenWindow.h" />
     <ClInclude Include="pch.h" />

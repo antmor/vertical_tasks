@@ -6,6 +6,8 @@
 #include <string>
 #include <format>
 
+#include "EnumToString.h"
+
 
 const static std::wstring_view s_app_frame_host{ L"ApplicationFrameHost.exe" };
 
@@ -32,35 +34,51 @@ struct ProcessId
     }
 };
 
-// Get the executable path or module name for modern apps
-inline ProcessId get_process_path(DWORD pid, bool uwpRequery = false) noexcept
+struct ProcessInfo
 {
-    wil::unique_handle process{ OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_VM_READ, TRUE, pid) };
-    std::wstring name = L"no process handle";
-    if (process)
+    std::wstring name{};
+    wil::unique_handle process{};
+};
+
+inline ProcessInfo GetProcessNameFromProcessId(DWORD pid)
+{
+    ProcessInfo info{};
+    info.process.reset(OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_VM_READ, TRUE, pid));
+    if (info.process)
     {
+        THROW_IF_NULL_ALLOC(info.process);
+        std::wstring name = L"no process handle";
         name.resize(MAX_PATH);
         DWORD name_length = static_cast<DWORD>(name.length());
-        if (QueryFullProcessImageNameW(process.get(), 0, (LPWSTR)name.data(), &name_length) == 0)
+        if (QueryFullProcessImageNameW(info.process.get(), 0, (PWSTR)name.data(), &name_length) == 0)
         {
             name_length = 0;
         }
         name.resize(name_length);
-        if (uwpRequery)
-        {
-            UINT32 aumidL{};
-            std::ignore = (GetApplicationUserModelId(process.get(), &aumidL, nullptr));
-            if (aumidL > 0)
-            {
-                std::wstring aumid = L"no process handle";
-                aumid.resize(aumidL + 1);
-                LOG_IF_WIN32_ERROR(GetApplicationUserModelId(process.get(), &aumidL, aumid.data()));
-                aumid.resize(aumidL);
-                return { pid, name, aumid };
-            }
-        }
-
+        info.name = std::move(name);
     }
+    return info;
+}
+
+// Get the executable path or module name for modern apps
+inline ProcessId get_process_path(DWORD pid, bool uwpRequery = false) noexcept
+{
+    auto [name, process] = GetProcessNameFromProcessId(pid);
+
+    if (process && uwpRequery)
+    {
+        UINT32 aumidL{};
+        std::ignore = (GetApplicationUserModelId(process.get(), &aumidL, nullptr));
+        if (aumidL > 0)
+        {
+            std::wstring aumid = L"no process handle";
+            aumid.resize(aumidL + 1);
+            LOG_IF_WIN32_ERROR(GetApplicationUserModelId(process.get(), &aumidL, aumid.data()));
+            aumid.resize(aumidL);
+            return { pid, name, aumid };
+        }
+    }
+
     return { pid, name };
 }
 
@@ -80,14 +98,30 @@ inline ProcessId get_process_path(HWND window) noexcept
         DWORD new_pid = pid;
 
         EnumChildWindows(
-            window, [](HWND hwnd, LPARAM param) -> BOOL
-        {
-            auto new_pid_ptr = reinterpret_cast<DWORD*>(param);
-            DWORD pid;
-            GetWindowThreadProcessId(hwnd, &pid);
-            if (pid != *new_pid_ptr)
+            window, [](HWND currHwnd, LPARAM param) -> BOOL
+        { 
+            // Every uwp app main window has at least three child windows. Only the one we are interested in has a class starting with "Windows.UI.Core." and is assigned to the real app process.
+            // (The other ones have a class name that begins with the string "ApplicationFrame".)
+                std::wstring_view uiCore{ L"Windows.UI.Core." };
+            std::wstring className;
+            className.resize(255);
+            auto written = GetClassNameW(currHwnd, className.data(), static_cast<int>(className.capacity()));
+            className.resize(written);
+            if (className.compare(0, uiCore.length(), uiCore))
+            //    if (GetWindowClassName(currHwnd).StartsWith("Windows.UI.Core.", StringComparison.OrdinalIgnoreCase))
             {
-                *new_pid_ptr = pid;
+                DWORD childProcessId{};
+                std::ignore = GetWindowThreadProcessId(currHwnd , &childProcessId);
+                auto [childProcessName, handle] = GetProcessNameFromProcessId(childProcessId);
+                auto new_pid_ptr = reinterpret_cast<DWORD*>(param);
+
+                if (childProcessId != *new_pid_ptr)
+                {
+                    *new_pid_ptr = childProcessId;
+                    return FALSE;
+                }
+                // Update process info in cache
+                //_handlesToProcessCache[hWindow].UpdateProcessInfo(childProcessId, childThreadId, childProcessName);
                 return FALSE;
             }
             else
@@ -112,9 +146,24 @@ struct OpenWindow
 {
     OpenWindow(HWND hwndIn) : m_hwnd(hwndIn)
     {
+        if (hwndIn == nullptr)
+        {
+            // placehodler 
+            return;
+        }
+
         m_process = get_process_path(hwndIn);
-        auto formatted = std::format(L"OpenWindow \n\t HWND = {:8x}; Cloaked = {}; PID = {}; \n\tProcess = {};\n\t AUMID = \n",
-            reinterpret_cast<ULONG_PTR>(m_hwnd), IsCloaked(), m_process.pid, m_process.processPath, m_process.aumid);
+        m_className.resize(255);
+        auto writen = GetClassNameW(hwndIn, m_className.data(), static_cast<int>(m_className.capacity()));
+        m_className.resize(writen);
+
+        auto currStyle = GetWindowLong(hwndIn, GWL_STYLE);
+        auto currExStyle = GetWindowLong(hwndIn, GWL_EXSTYLE);
+
+        auto formatted = std::format(L"OpenWindow \n\t HWND = {:8x}; Cloaked = {}; PID = {}; \n\tProcess = {};\n\t AUMID = {}\n\t classname = {}\n\t {:8x} {} \n\t {:8x} {}\n",
+            reinterpret_cast<ULONG_PTR>(m_hwnd), IsCloaked(), m_process.pid, m_process.processPath, m_process.aumid, m_className,
+            currStyle, WindowStylesToString(currStyle),
+            currExStyle, ExWindowStylesToString(currExStyle));
         OutputDebugString(formatted.c_str());
     }
 
@@ -137,14 +186,13 @@ struct OpenWindow
     {
         return m_process.for_display();
     }
-
     
     const std::wstring_view CachedTitle() const
     {
         return m_cachedTitle;
     }
 
-    bool IsCloaked()
+    bool IsCloaked() const
     {
         DWORD cloakAttrib;
         DwmGetWindowAttribute(m_hwnd, DWMWA_CLOAKED, &cloakAttrib, sizeof(cloakAttrib));
@@ -164,7 +212,7 @@ struct OpenWindow
         }
         else
         {
-            LOG_HR_MSG(E_INVALIDARG, "%ws has no window title", m_process.for_display().data());
+            //LOG_HR_MSG(E_INVALIDARG, "%ws has no window title", m_process.for_display().data());
         }
         m_cachedTitle = newTitle;
         return newTitle;
@@ -222,9 +270,28 @@ struct OpenWindow
         TerminateProcess(processHandle.get(), 0);
     }
 
+    bool IsValidWindow() const
+    {
+        return IsValidWindow(m_hwnd);
+    }
+
+    static bool IsValidWindow(::HWND hwnd)
+    {
+        std::wstring className;
+        className.resize(255);
+        auto written = GetClassNameW(hwnd, className.data(), static_cast<int>(className.capacity()));
+        className.resize(written);
+
+        const auto wsf = GetWindowLong(hwnd, GWL_EXSTYLE);
+        return IsWindow(hwnd) && IsWindowVisible(hwnd) && (0 == GetWindow(hwnd, GW_OWNER)) &&
+            !TaskListDeleted(hwnd) &&
+            (WI_IsFlagClear(wsf, WS_EX_TOOLWINDOW) || WI_IsFlagSet(wsf, WS_EX_APPWINDOW)) &&
+            className != L"Windows.UI.Core.CoreWindow";
+    }
 private:
 
     const ::HWND m_hwnd;
     ProcessId m_process;
     std::wstring m_cachedTitle;
+    std::wstring m_className;
 };

@@ -13,7 +13,7 @@ namespace vertical_tasks
     runtimeclass TaskVM : Microsoft.UI.Xaml.Data.INotifyPropertyChanged
     {
         String Title{ get; };
-
+        Microsoft.UI.Xaml.Visibility TaskVisibility{ get; };
         Microsoft.UI.Xaml.Media.Imaging.SoftwareBitmapSource IconSource{ get; set; };
 
         GroupId Group{ get; set; };

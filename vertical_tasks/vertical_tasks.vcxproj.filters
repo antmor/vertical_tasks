@@ -23,6 +23,7 @@
     <ClInclude Include="ImageHelper.h" />
     <ClInclude Include="OpenWindow.h" />
     <ClInclude Include="AppBarMessages.h" />
+    <ClInclude Include="EnumToString.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Assets">

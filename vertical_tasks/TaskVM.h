@@ -149,6 +149,11 @@ namespace winrt::vertical_tasks::implementation
 
         hstring DebugInfo() const;
 
+        Microsoft::UI::Xaml::Visibility TaskVisibility() const
+        {
+            return m_isVisible ? Microsoft::UI::Xaml::Visibility::Visible : Microsoft::UI::Xaml::Visibility::Collapsed;
+        }
+
         Microsoft::UI::Xaml::Media::Imaging::SoftwareBitmapSource IconSource()
         {
             return m_iconSource;
@@ -203,9 +208,7 @@ namespace winrt::vertical_tasks::implementation
 
         static bool IsValidWindow(HWND hwnd)
         {
-            const auto wsf = GetWindowLong(hwnd, GWL_EXSTYLE);
-            return IsWindow(hwnd) && IsWindowVisible(hwnd) && (0 == GetWindow(hwnd, GW_OWNER)) &&
-                (WI_IsFlagClear(wsf, WS_EX_TOOLWINDOW) || WI_IsFlagSet(wsf, WS_EX_APPWINDOW)) && !TaskListDeleted(hwnd);
+            return OpenWindow::IsValidWindow(hwnd);
         }
 
         void SetIconSize(SIZE size)
@@ -218,8 +221,8 @@ namespace winrt::vertical_tasks::implementation
 
         void Print(std::wstring_view category);
 
-        bool m_isGroupHeader;
-        bool m_isGroupedTask;
+        bool m_isGroupHeader = false;
+        bool m_isGroupedTask = false;
         bool m_groupsAvailable = false;
 
         bool m_isGroupOneAvailable = false;
@@ -227,13 +230,14 @@ namespace winrt::vertical_tasks::implementation
         bool m_isGroupThreeAvailable = false;
         bool m_isGroupFourAvailable = false;
 
-        winrt::vertical_tasks::GroupId m_groupId;
+        winrt::vertical_tasks::GroupId m_groupId{};
         OpenWindow m_window;
         SIZE m_iconSize{};
+        bool m_isVisible{ false };
 
         winrt::weak_ref<winrt::Microsoft::UI::Dispatching::DispatcherQueue> m_uiThread{ nullptr };
 
-        winrt::hstring m_title;
+        winrt::hstring m_title{};
         winrt::Microsoft::UI::Xaml::Media::Imaging::SoftwareBitmapSource m_iconSource{ nullptr };
 
         u_int m_groupIndex;
